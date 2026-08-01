@@ -2,7 +2,10 @@
    SERVICE WORKER - EL GATO ROSADO EN LA SELVA (JUEGO OFFLINE)
    ========================================================================== */
 
-const CACHE_NAME = 'pink-cat-jungle-v1';
+// IMPORTANTE: subir este número en cada actualización del juego. Es lo que
+// obliga a los celulares que ya tenían una versión vieja guardada a botarla
+// y pedir la nueva la próxima vez que abran el juego con internet.
+const CACHE_NAME = 'pink-cat-jungle-v2';
 const CORE_ASSETS = [
     './',
     './index.html',
@@ -29,26 +32,22 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Estrategia "cache-first, red de respaldo": ideal para un juego que debe
-// abrir instantáneamente y funcionar sin conexión (fuentes de Google se
-// excluyen para no romper el juego si el usuario está realmente offline).
+// Estrategia "red primero, caché de respaldo": con internet, el juego
+// siempre pide la versión más reciente (así las actualizaciones se ven de
+// inmediato); el caché solo se usa si el celular está realmente sin señal.
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     if (!event.request.url.startsWith(self.location.origin)) return;
 
     event.respondWith(
-        caches.match(event.request).then((cached) => {
-            if (cached) return cached;
-
-            return fetch(event.request)
-                .then((response) => {
-                    if (response && response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-                    }
-                    return response;
-                })
-                .catch(() => cached);
-        })
+        fetch(event.request)
+            .then((response) => {
+                if (response && response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                }
+                return response;
+            })
+            .catch(() => caches.match(event.request))
     );
 });
