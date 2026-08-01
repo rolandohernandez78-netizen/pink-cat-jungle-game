@@ -139,11 +139,15 @@
                     </div>
                 </div>
 
-                <div class="badges-row">
-                    <div class="high-score-badge">
-                        🏆 MEJOR PUNTUACIÓN: <span id="start-high-score">0</span>
+                <div class="leaderboard-box">
+                    <h3>🏆 RANKING DE LA SELVA</h3>
+                    <div id="leaderboard-list" class="leaderboard-list">
+                        <div class="leaderboard-empty">¡Sé el primero en el ranking!</div>
                     </div>
-                    <div class="hairball-badge">
+                </div>
+
+                <div class="badges-row">
+                    <div class="hairball-badge full-width">
                         🧶 <span id="start-hairballs">0</span>
                     </div>
                 </div>
@@ -245,11 +249,25 @@
                         <strong id="victory-stat-hairballs">+0</strong>
                     </div>
                     <div id="victory-trophy-tag" class="new-record-tag hidden">🏆 ¡Corona de Campeón desbloqueada!</div>
+                    <div id="victory-rank-tag" class="new-record-tag hidden">🌟 ¡Puesto <span id="victory-rank-number">1</span> en el Ranking! 🌟</div>
                 </div>
 
                 <div class="menu-buttons">
                     <button id="btn-victory-menu" class="btn btn-primary btn-wide">🏠 Menú Principal</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Pantalla para ingresar iniciales al superar un récord -->
+        <div id="screen-initials" class="overlay-screen hidden">
+            <div class="menu-card glass-panel text-center initials-card">
+                <div class="victory-icon">🏆✨</div>
+                <h2>¡NUEVO RÉCORD!</h2>
+                <p id="initials-score-text">¡Entraste al ranking con 0 puntos!</p>
+
+                <input id="initials-input" class="initials-input" maxlength="3" placeholder="ABC" autocomplete="off" autocapitalize="characters" spellcheck="false">
+
+                <button id="btn-confirm-initials" class="btn btn-primary btn-wide">✅ Guardar en el Ranking</button>
             </div>
         </div>
 
@@ -269,7 +287,7 @@
                         <span>Puntuación final:</span>
                         <strong id="go-stat-score" class="highlight-text">0</strong>
                     </div>
-                    <div id="new-high-score-tag" class="new-record-tag hidden">🌟 ¡NUEVO RÉCORD! 🌟</div>
+                    <div id="new-high-score-tag" class="new-record-tag hidden">🌟 ¡Puesto <span id="go-rank-number">1</span> en el Ranking! 🌟</div>
                     <div class="stat-row hairball-row">
                         <span>🧶 Bolas de pelo ganadas:</span>
                         <strong id="go-stat-hairballs">+0</strong>

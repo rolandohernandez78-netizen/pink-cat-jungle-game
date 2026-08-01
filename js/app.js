@@ -1678,7 +1678,6 @@ class UIManager {
         this.powerupName = document.getElementById('powerup-name');
         this.comboBanner = document.getElementById('combo-banner');
         this.comboText = document.getElementById('combo-text');
-        this.startHighScore = document.getElementById('start-high-score');
 
         this.milestoneBanner = document.getElementById('milestone-banner');
         this.milestoneText = document.getElementById('milestone-text');
@@ -1692,20 +1691,122 @@ class UIManager {
         this.screenShop = document.getElementById('screen-shop');
         this.screenVictory = document.getElementById('screen-victory');
 
+        this.leaderboardList = document.getElementById('leaderboard-list');
+        this.screenInitials = document.getElementById('screen-initials');
+        this.initialsInput = document.getElementById('initials-input');
+        this.initialsScoreText = document.getElementById('initials-score-text');
+        this._pendingScore = 0;
+        this._pendingInitialsCallback = null;
+
         this.btnSound = document.getElementById('btn-sound');
         this.btnHomeHud = document.getElementById('btn-home-hud');
         this.btnPause = document.getElementById('btn-pause');
 
-        this.highScore = parseInt(localStorage.getItem('pink_cat_high_score') || '0', 10);
+        this.leaderboard = this.loadLeaderboard();
         this.hairballs = parseInt(localStorage.getItem('pink_cat_hairballs') || '0', 10);
         this.ownedAccessories = JSON.parse(localStorage.getItem('pink_cat_owned_accessories') || '[]');
         this.equippedAccessory = localStorage.getItem('pink_cat_equipped_accessory') || null;
         this.ownedPowerups = JSON.parse(localStorage.getItem('pink_cat_owned_powerups') || '[]');
 
-        this.updateStartHighScoreDisplay();
+        this.renderLeaderboard();
         this.updateHairballDisplays();
 
         this.bindEvents();
+    }
+
+    loadLeaderboard() {
+        let list = [];
+        try {
+            list = JSON.parse(localStorage.getItem('pink_cat_leaderboard') || '[]');
+        } catch (e) {
+            list = [];
+        }
+        if (!Array.isArray(list)) list = [];
+
+        // Migración: si alguien ya tenía un mejor puntaje guardado del sistema
+        // anterior (una sola casilla, sin iniciales) y todavía no hay ranking,
+        // se conserva esa puntuación como primera entrada para no perderla.
+        if (list.length === 0) {
+            const oldHighScore = parseInt(localStorage.getItem('pink_cat_high_score') || '0', 10);
+            if (oldHighScore > 0) {
+                list = [{ initials: '???', score: oldHighScore }];
+            }
+        }
+        return list;
+    }
+
+    saveLeaderboard() {
+        localStorage.setItem('pink_cat_leaderboard', JSON.stringify(this.leaderboard));
+    }
+
+    renderLeaderboard() {
+        if (!this.leaderboardList) return;
+
+        if (this.leaderboard.length === 0) {
+            this.leaderboardList.innerHTML = '<div class="leaderboard-empty">¡Sé el primero en el ranking!</div>';
+            return;
+        }
+
+        this.leaderboardList.innerHTML = this.leaderboard.map((entry, i) => {
+            const initials = document.createElement('div');
+            initials.textContent = entry.initials;
+            return `
+                <div class="leaderboard-row ${i === 0 ? 'rank-1' : ''}">
+                    <span class="leaderboard-rank">${i + 1}.</span>
+                    <span class="leaderboard-initials">${initials.innerHTML}</span>
+                    <span class="leaderboard-score">${entry.score.toLocaleString()}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    qualifiesForLeaderboard(score) {
+        const MAX_ENTRIES = 5;
+        if (score <= 0) return false;
+        if (this.leaderboard.length < MAX_ENTRIES) return true;
+        return score > this.leaderboard[this.leaderboard.length - 1].score;
+    }
+
+    addLeaderboardEntry(initials, score) {
+        const clean = (initials || '').toUpperCase().replace(/[^A-ZÑ]/g, '').slice(0, 3) || 'AAA';
+        this.leaderboard.push({ initials: clean, score });
+        this.leaderboard.sort((a, b) => b.score - a.score);
+        this.leaderboard = this.leaderboard.slice(0, 5);
+        this.saveLeaderboard();
+        this.renderLeaderboard();
+        localStorage.setItem('pink_cat_last_initials', clean);
+
+        const rank = this.leaderboard.findIndex((e) => e.initials === clean && e.score === score);
+        return rank === -1 ? null : rank + 1;
+    }
+
+    showInitialsPrompt(score, onDone) {
+        this._pendingScore = score;
+        this._pendingInitialsCallback = onDone;
+
+        if (this.initialsScoreText) {
+            this.initialsScoreText.textContent = `¡Entraste al ranking con ${score.toLocaleString()} puntos!`;
+        }
+        if (this.initialsInput) {
+            this.initialsInput.value = localStorage.getItem('pink_cat_last_initials') || '';
+        }
+        if (this.screenInitials) this.screenInitials.classList.remove('hidden');
+        sound.playLevelClear();
+
+        if (this.initialsInput) {
+            setTimeout(() => this.initialsInput.focus(), 50);
+        }
+    }
+
+    confirmInitials() {
+        const value = this.initialsInput ? this.initialsInput.value : '';
+        const rank = this.addLeaderboardEntry(value, this._pendingScore);
+
+        if (this.screenInitials) this.screenInitials.classList.add('hidden');
+
+        const callback = this._pendingInitialsCallback;
+        this._pendingInitialsCallback = null;
+        if (callback) callback(rank);
     }
 
     updateHairballDisplays() {
@@ -1873,6 +1974,22 @@ class UIManager {
             tabPowerups.addEventListener('click', () => this.switchShopTab('powerups'));
         }
 
+        const confirmInitialsBtn = document.getElementById('btn-confirm-initials');
+        if (confirmInitialsBtn) {
+            confirmInitialsBtn.addEventListener('click', () => this.confirmInitials());
+        }
+        if (this.initialsInput) {
+            this.initialsInput.addEventListener('input', () => {
+                this.initialsInput.value = this.initialsInput.value.toUpperCase().replace(/[^A-ZÑ]/g, '').slice(0, 3);
+            });
+            this.initialsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.confirmInitials();
+                }
+            });
+        }
+
         this.setupTouchControls();
     }
 
@@ -1992,9 +2109,25 @@ class UIManager {
         if (trophyEl) trophyEl.classList.toggle('hidden', !stats.newTrophy);
 
         this.addHairballs(stats.hairballsEarned);
-        this.checkHighScore(stats.totalScore);
-        if (this.screenVictory) this.screenVictory.classList.remove('hidden');
-        sound.playLevelClear();
+
+        const finish = (rank) => {
+            const rankTag = document.getElementById('victory-rank-tag');
+            const rankNumberEl = document.getElementById('victory-rank-number');
+            if (rank) {
+                if (rankNumberEl) rankNumberEl.textContent = rank;
+                if (rankTag) rankTag.classList.remove('hidden');
+            } else if (rankTag) {
+                rankTag.classList.add('hidden');
+            }
+            if (this.screenVictory) this.screenVictory.classList.remove('hidden');
+            sound.playLevelClear();
+        };
+
+        if (this.qualifiesForLeaderboard(stats.totalScore)) {
+            this.showInitialsPrompt(stats.totalScore, finish);
+        } else {
+            finish(null);
+        }
     }
 
     setupTouchControls() {
@@ -2036,22 +2169,6 @@ class UIManager {
         if (el) el.textContent = `x${count}`;
     }
 
-    updateStartHighScoreDisplay() {
-        if (this.startHighScore) {
-            this.startHighScore.textContent = this.highScore.toLocaleString();
-        }
-    }
-
-    checkHighScore(newScore) {
-        if (newScore > this.highScore) {
-            this.highScore = newScore;
-            localStorage.setItem('pink_cat_high_score', this.highScore.toString());
-            this.updateStartHighScoreDisplay();
-            return true;
-        }
-        return false;
-    }
-
     showStartScreen() {
         if (this.screenStart) this.screenStart.classList.remove('hidden');
         if (this.screenPause) this.screenPause.classList.add('hidden');
@@ -2059,9 +2176,11 @@ class UIManager {
         if (this.screenGameOver) this.screenGameOver.classList.add('hidden');
         if (this.screenVictory) this.screenVictory.classList.add('hidden');
         if (this.screenShop) this.screenShop.classList.add('hidden');
+        if (this.screenInitials) this.screenInitials.classList.add('hidden');
         if (this.hud) this.hud.classList.add('hidden');
         if (this.touchControls) this.touchControls.classList.add('hidden');
         this.updateHairballDisplays();
+        this.renderLeaderboard();
     }
 
     showHUD(isMobile = false) {
@@ -2071,6 +2190,7 @@ class UIManager {
         if (this.screenGameOver) this.screenGameOver.classList.add('hidden');
         if (this.screenVictory) this.screenVictory.classList.add('hidden');
         if (this.screenShop) this.screenShop.classList.add('hidden');
+        if (this.screenInitials) this.screenInitials.classList.add('hidden');
         if (this.hud) this.hud.classList.remove('hidden');
 
         if (isMobile && this.touchControls) {
@@ -2116,15 +2236,24 @@ class UIManager {
 
         this.addHairballs(stats.hairballsEarned);
 
-        const isNewRecord = this.checkHighScore(stats.totalScore);
-        const recordTag = document.getElementById('new-high-score-tag');
-        if (recordTag) {
-            if (isNewRecord) recordTag.classList.remove('hidden');
-            else recordTag.classList.add('hidden');
-        }
+        const finish = (rank) => {
+            const recordTag = document.getElementById('new-high-score-tag');
+            const rankNumberEl = document.getElementById('go-rank-number');
+            if (rank) {
+                if (rankNumberEl) rankNumberEl.textContent = rank;
+                if (recordTag) recordTag.classList.remove('hidden');
+            } else if (recordTag) {
+                recordTag.classList.add('hidden');
+            }
+            if (this.screenGameOver) this.screenGameOver.classList.remove('hidden');
+            sound.playGameOver();
+        };
 
-        if (this.screenGameOver) this.screenGameOver.classList.remove('hidden');
-        sound.playGameOver();
+        if (this.qualifiesForLeaderboard(stats.totalScore)) {
+            this.showInitialsPrompt(stats.totalScore, finish);
+        } else {
+            finish(null);
+        }
     }
 
     updateHUD(score, miceCaught, miceTarget, timerSeconds, pounceCooldownPct, powerupState) {
