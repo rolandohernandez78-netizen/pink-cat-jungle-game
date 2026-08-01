@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>El Gato Rosado en la Selva 🐱🌴 - Pink Cat Jungle Hunt</title>
+    <meta name="description" content="Un vibrante videojuego de acción en la selva donde controlas a un gato rosado persiguiendo ratones escurridizos.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="game-wrapper">
+        <!-- Canvas principal de juego -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD (Heads-Up Display) sobre el canvas -->
+        <div id="hud" class="hidden">
+            <div class="hud-top-bar">
+                <div class="hud-card score-card">
+                    <span class="hud-label">PUNTOS</span>
+                    <span id="score-text" class="hud-value">0</span>
+                </div>
+                
+                <div class="hud-card mice-card">
+                    <span class="hud-label">RATONES</span>
+                    <div class="hud-value-group">
+                        <span id="mice-caught-text" class="hud-value highlight">0</span>
+                        <span class="hud-value-sub">/ <span id="mice-target-text">15</span></span>
+                    </div>
+                </div>
+
+                <div class="hud-card timer-card">
+                    <span class="hud-label">TIEMPO</span>
+                    <span id="timer-text" class="hud-value">60</span>s
+                </div>
+
+                <div class="hud-actions">
+                    <button id="btn-sound" class="icon-btn" title="Activar/Desactivar Sonido">🔊</button>
+                    <button id="btn-home-hud" class="icon-btn" title="Volver al Menú Principal">🏠</button>
+                    <button id="btn-pause" class="icon-btn" title="Pausar Juego">⏸️</button>
+                </div>
+            </div>
+
+            <!-- Barras de estado: Estamina/Salto & Potenciador -->
+            <div class="hud-bottom-bar">
+                <div class="status-bar-container">
+                    <div class="bar-label">⚡ IMPULSO / ABALANZARSE (Espacio)</div>
+                    <div class="bar-track">
+                        <div id="pounce-bar-fill" class="bar-fill pounce-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <div id="active-powerup-badge" class="powerup-badge hidden">
+                    <span id="powerup-icon">🌿</span>
+                    <span id="powerup-name">¡HIERBA GATUNA VELOZ!</span>
+                    <div class="badge-timer-bar">
+                        <div id="powerup-timer-fill" class="badge-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Banner de Combos -->
+            <div id="combo-banner" class="combo-banner hidden">
+                <span id="combo-text">¡COMBO x2! 🔥</span>
+            </div>
+        </div>
+
+        <!-- Pantalla de Inicio / Menú Principal -->
+        <div id="screen-start" class="overlay-screen">
+            <div class="menu-card glass-panel">
+                <div class="logo-container">
+                    <div class="cat-logo-badge">🐱🌸</div>
+                    <h1 class="game-title">EL GATO ROSADO<br><span class="highlight-jungle">EN LA SELVA</span></h1>
+                    <p class="game-subtitle">¡Camina, salta y atrapa a los ratones selváticos!</p>
+                </div>
+
+                <div class="mode-selection">
+                    <button id="btn-mode-adventure" class="btn btn-primary btn-large">
+                        <span class="btn-icon">🌴</span>
+                        <span class="btn-text">
+                            <strong>MODO AVENTURA</strong>
+                            <small>Supera niveles selváticos con metas</small>
+                        </span>
+                    </button>
+
+                    <button id="btn-mode-endless" class="btn btn-secondary btn-large">
+                        <span class="btn-icon">⚡</span>
+                        <span class="btn-text">
+                            <strong>CAZA INFINITA</strong>
+                            <small>Récord de ratones en tiempo libre</small>
+                        </span>
+                    </button>
+                </div>
+
+                <div class="controls-preview">
+                    <h3>🎮 CONTROLES:</h3>
+                    <div class="controls-grid">
+                        <div class="control-item"><kbd>W A S D</kbd> / <kbd>⬆️ ⬅️ ⬇️ ➡️</kbd> <span>Mover Gato</span></div>
+                        <div class="control-item"><kbd>ESPACIO</kbd> / <kbd>CLIC</kbd> <span>Abalanzarse (Salto)</span></div>
+                        <div class="control-item">📱 <span>Toca/Arrastra en Pantalla en Celulares</span></div>
+                    </div>
+                </div>
+
+                <div class="high-score-badge">
+                    🏆 MEJOR PUNTUACIÓN: <span id="start-high-score">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Pausa -->
+        <div id="screen-pause" class="overlay-screen hidden">
+            <div class="menu-card glass-panel text-center">
+                <h2>⏸️ JUEGO EN PAUSA</h2>
+                <p>La selva descansa un momento...</p>
+                <div class="menu-buttons">
+                    <button id="btn-resume" class="btn btn-primary btn-wide">▶️ Continuar</button>
+                    <button id="btn-restart-pause" class="btn btn-secondary btn-wide">🔄 Reiniciar Nivel</button>
+                    <button id="btn-quit" class="btn btn-danger btn-wide">🏠 Menú Principal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Nivel Completado -->
+        <div id="screen-level-clear" class="overlay-screen hidden">
+            <div class="menu-card glass-panel text-center">
+                <div class="victory-icon">🎉 🐱</div>
+                <h2 id="level-clear-title">¡NIVEL COMPLETADO!</h2>
+                <p id="level-clear-desc">¡El gato rosado ha dominado la selva!</p>
+
+                <div class="stats-box">
+                    <div class="stat-row">
+                        <span>Ratones atrapados:</span>
+                        <strong id="stat-mice-caught">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Puntos del nivel:</span>
+                        <strong id="stat-level-score">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Bono por tiempo:</span>
+                        <strong id="stat-time-bonus">+0</strong>
+                    </div>
+                    <div class="stat-row total-row">
+                        <span>Puntuación total:</span>
+                        <strong id="stat-total-score" class="highlight-text">0</strong>
+                    </div>
+                </div>
+
+                <button id="btn-next-level" class="btn btn-primary btn-large btn-wide">🚀 Siguiente Nivel</button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Fin de Juego (Game Over) -->
+        <div id="screen-game-over" class="overlay-screen hidden">
+            <div class="menu-card glass-panel text-center">
+                <div class="defeat-icon">😿 🐭</div>
+                <h2>¡SE ACABÓ EL TIEMPO!</h2>
+                <p>Los ratones escaparon entre la maleza selvática...</p>
+
+                <div class="stats-box">
+                    <div class="stat-row">
+                        <span>Ratones atrapados:</span>
+                        <strong id="go-stat-mice">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Puntuación final:</span>
+                        <strong id="go-stat-score" class="highlight-text">0</strong>
+                    </div>
+                    <div id="new-high-score-tag" class="new-record-tag hidden">🌟 ¡NUEVO RÉCORD! 🌟</div>
+                </div>
+
+                <div class="menu-buttons">
+                    <button id="btn-retry" class="btn btn-primary btn-wide">🔄 Intentar de Nuevo</button>
+                    <button id="btn-main-menu-go" class="btn btn-secondary btn-wide">🏠 Menú Principal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles virtuales táctiles (Móviles / Touch) -->
+        <div id="touch-controls" class="touch-controls hidden">
+            <div id="joystick-zone" class="joystick-zone">
+                <div id="joystick-base" class="joystick-base">
+                    <div id="joystick-stick" class="joystick-stick"></div>
+                </div>
+            </div>
+            <button id="btn-touch-pounce" class="touch-pounce-btn">
+                <span>🐱💨</span>
+                <small>SALTO</small>
+            </button>
+        </div>
+    </div>
+
+    <!-- Módulo del Juego Standalone (Arranque Automático Sin Bloqueos) -->
+    <script src="js/app.js"></script>
+</body>
+</html>
