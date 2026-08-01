@@ -10,6 +10,11 @@ class SoundSynthesizer {
         this.ctx = null;
         this.muted = false;
         this.initialized = false;
+
+        this.musicPlaying = false;
+        this.musicTimeoutId = null;
+        this.musicGain = null;
+        this.musicLoopDuration = 2.8;
     }
 
     init() {
@@ -32,6 +37,88 @@ class SoundSynthesizer {
     toggleMute() {
         this.muted = !this.muted;
         return this.muted;
+    }
+
+    startMusic() {
+        if (!this.ctx || this.musicPlaying) return;
+        this.musicPlaying = true;
+        if (!this.musicGain) {
+            this.musicGain = this.ctx.createGain();
+            this.musicGain.gain.value = 0.07;
+            this.musicGain.connect(this.ctx.destination);
+        }
+        this.scheduleMusicLoop();
+    }
+
+    stopMusic() {
+        this.musicPlaying = false;
+        if (this.musicTimeoutId) {
+            clearTimeout(this.musicTimeoutId);
+            this.musicTimeoutId = null;
+        }
+    }
+
+    scheduleMusicLoop() {
+        if (!this.musicPlaying || !this.ctx) return;
+
+        if (!this.muted) {
+            this.resume();
+            this.playMusicBar();
+        }
+
+        this.musicTimeoutId = setTimeout(() => this.scheduleMusicLoop(), this.musicLoopDuration * 1000);
+    }
+
+    playMusicBar() {
+        const now = this.ctx.currentTime;
+
+        // Melodía juguetona en escala pentatónica (aventura selvática, apta para niños)
+        const melody = [
+            { note: 261.63, dur: 0.35 },
+            { note: 329.63, dur: 0.35 },
+            { note: 392.00, dur: 0.35 },
+            { note: 329.63, dur: 0.35 },
+            { note: 293.66, dur: 0.35 },
+            { note: 392.00, dur: 0.35 },
+            { note: 440.00, dur: 0.35 },
+            { note: 392.00, dur: 0.7 }
+        ];
+
+        let t = now;
+        for (const step of melody) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+
+            osc.type = 'triangle';
+            osc.frequency.value = step.note;
+            filter.type = 'lowpass';
+            filter.frequency.value = 2400;
+
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.9, t + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + step.dur);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.musicGain);
+
+            osc.start(t);
+            osc.stop(t + step.dur + 0.05);
+            t += step.dur;
+        }
+
+        const bassOsc = this.ctx.createOscillator();
+        const bassGain = this.ctx.createGain();
+        bassOsc.type = 'sine';
+        bassOsc.frequency.value = 130.81;
+        bassGain.gain.setValueAtTime(0, now);
+        bassGain.gain.linearRampToValueAtTime(0.5, now + 0.06);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + this.musicLoopDuration * 0.9);
+        bassOsc.connect(bassGain);
+        bassGain.connect(this.musicGain);
+        bassOsc.start(now);
+        bassOsc.stop(now + this.musicLoopDuration);
     }
 
     playMeow() {
@@ -258,6 +345,8 @@ class PinkCat {
         this.magnetRadius = 180;
         
         this.inMud = false;
+        this.accessory = null;
+        this.isHappy = false;
     }
 
     update(keys, touchVector, canvasWidth, canvasHeight, step = 1) {
@@ -501,7 +590,12 @@ class PinkCat {
         ctx.fillStyle = '#ff8dc0'; ctx.fill();
 
         // Ojos
-        if (this.isBlinking) {
+        if (this.isHappy) {
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💕', 19, -12);
+        } else if (this.isBlinking) {
             ctx.beginPath();
             ctx.arc(18, -12, 3, 0.1, Math.PI - 0.1);
             ctx.strokeStyle = '#3d061e';
@@ -538,6 +632,34 @@ class PinkCat {
         ctx.moveTo(27, -7); ctx.lineTo(38, -6);
         ctx.moveTo(27, -6); ctx.lineTo(36, 0);
         ctx.stroke();
+
+        this.drawAccessory(ctx);
+
+        ctx.restore();
+    }
+
+    drawAccessory(ctx) {
+        if (!this.accessory) return;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const positions = {
+            crown: { x: 12, y: -30, size: 20 },
+            bow: { x: 26, y: -22, size: 16 },
+            flower: { x: 2, y: -20, size: 16 },
+            scarf: { x: 2, y: 10, size: 22 },
+            glasses: { x: 19, y: -12, size: 18 }
+        };
+        const icons = { crown: '👑', bow: '🎀', flower: '🌸', scarf: '🧣', glasses: '🕶️' };
+
+        const pos = positions[this.accessory];
+        const icon = icons[this.accessory];
+        if (!pos || !icon) { ctx.restore(); return; }
+
+        ctx.font = `${pos.size}px sans-serif`;
+        ctx.fillText(icon, pos.x, pos.y);
 
         ctx.restore();
     }
@@ -783,12 +905,344 @@ class CheeseDrop {
 }
 
 // --------------------------------------------------------------------------
+// QUESO LANZADO (PROYECTIL PARA DISTRAER AL JEFE FINAL)
+// --------------------------------------------------------------------------
+class ThrownCheese {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = 10;
+        this.life = 90;
+        this.rotation = 0;
+    }
+
+    update(step = 1) {
+        this.x += this.vx * step;
+        this.y += this.vy * step;
+        this.rotation += 0.2 * step;
+        this.life -= step;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        ctx.beginPath();
+        ctx.moveTo(-8, 6);
+        ctx.lineTo(8, 6);
+        ctx.lineTo(0, -8);
+        ctx.closePath();
+        ctx.fillStyle = '#facc15';
+        ctx.fill();
+        ctx.strokeStyle = '#eab308';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+// --------------------------------------------------------------------------
+// JEFE FINAL: SÚPER RATÓN REY DE LA SELVA
+// --------------------------------------------------------------------------
+class SuperMouseBoss {
+    constructor(x, y, maxHealth = 4) {
+        this.x = x;
+        this.y = y;
+        this.radius = 42;
+        this.baseSpeed = 3.2;
+        this.speed = this.baseSpeed;
+        this.vx = 0;
+        this.vy = 0;
+        this.angle = Math.random() * Math.PI * 2;
+        this.facingRight = true;
+
+        this.maxHealth = maxHealth;
+        this.health = maxHealth;
+        this.state = 'ROAMING'; // ROAMING | DISTRACTED | DEFEATED
+        this.distractedTimer = 0;
+        this.maxDistractedTime = 3;
+
+        this.scuttleCycle = 0;
+        this.changeDirectionTimer = 60;
+        this.hitFlash = 0;
+    }
+
+    distract() {
+        if (this.state !== 'ROAMING') return;
+        this.state = 'DISTRACTED';
+        this.distractedTimer = this.maxDistractedTime;
+        this.vx = 0;
+        this.vy = 0;
+    }
+
+    takeHit() {
+        this.health--;
+        this.hitFlash = 0.3;
+        if (this.health <= 0) {
+            this.state = 'DEFEATED';
+        } else {
+            this.state = 'ROAMING';
+            this.speed = this.baseSpeed + (this.maxHealth - this.health) * 0.5;
+        }
+    }
+
+    update(cat, canvasWidth, canvasHeight, step = 1, dt = 0) {
+        if (this.hitFlash > 0) this.hitFlash = Math.max(0, this.hitFlash - dt);
+        if (this.state === 'DEFEATED') return;
+
+        if (this.state === 'DISTRACTED') {
+            this.distractedTimer -= dt;
+            this.scuttleCycle += 0.12 * step;
+            if (this.distractedTimer <= 0) {
+                this.state = 'ROAMING';
+            }
+            return;
+        }
+
+        const dxToCat = this.x - cat.x;
+        const dyToCat = this.y - cat.y;
+        const distToCat = Math.hypot(dxToCat, dyToCat) || 1;
+
+        if (distToCat < 220) {
+            const fleeSpeed = this.speed * 1.3;
+            this.vx = (dxToCat / distToCat) * fleeSpeed;
+            this.vy = (dyToCat / distToCat) * fleeSpeed;
+        } else {
+            this.changeDirectionTimer -= step;
+            if (this.changeDirectionTimer <= 0) {
+                this.angle += (Math.random() - 0.5) * 1.4;
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+                this.changeDirectionTimer = Math.floor(50 + Math.random() * 80);
+            }
+        }
+
+        this.x += this.vx * step;
+        this.y += this.vy * step;
+
+        if (this.vx > 0.1) this.facingRight = true;
+        if (this.vx < -0.1) this.facingRight = false;
+
+        const margin = this.radius + 10;
+        if (this.x < margin) { this.x = margin; this.vx *= -1; this.angle = Math.PI - this.angle; }
+        if (this.x > canvasWidth - margin) { this.x = canvasWidth - margin; this.vx *= -1; this.angle = Math.PI - this.angle; }
+        if (this.y < margin + 50) { this.y = margin + 50; this.vy *= -1; this.angle = -this.angle; }
+        if (this.y > canvasHeight - margin - 20) { this.y = canvasHeight - margin - 20; this.vy *= -1; this.angle = -this.angle; }
+
+        this.scuttleCycle = (this.scuttleCycle + 0.3 * step) % (Math.PI * 2);
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (!this.facingRight) ctx.scale(-1, 1);
+
+        if (this.state === 'DISTRACTED') {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 14, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+            ctx.fill();
+        }
+
+        if (this.hitFlash > 0) {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.hitFlash})`;
+            ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.ellipse(0, this.radius * 0.75, this.radius * 0.9, this.radius * 0.3, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-this.radius * 0.7, 4);
+        ctx.quadraticCurveTo(-this.radius * 1.3, -14, -this.radius * 1.7, 2);
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        const legOffset = this.state === 'DISTRACTED' ? 0 : Math.sin(this.scuttleCycle) * (this.radius * 0.3);
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-this.radius * 0.4, this.radius * 0.4); ctx.lineTo(-this.radius * 0.4 + legOffset, this.radius * 0.8);
+        ctx.moveTo(this.radius * 0.3, this.radius * 0.4); ctx.lineTo(this.radius * 0.3 - legOffset, this.radius * 0.8);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radius * 0.85, this.radius * 0.6, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#92400e';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(this.radius * 0.1, this.radius * 0.25, this.radius * 0.5, this.radius * 0.35, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#d6b98c';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(-this.radius * 0.15, -this.radius * 0.55, this.radius * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = '#92400e';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-this.radius * 0.15, -this.radius * 0.55, this.radius * 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fca5a5';
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(this.radius * 0.05, -this.radius * 0.95);
+        ctx.font = `${Math.round(this.radius * 0.65)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👑', 0, 0);
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.45, -this.radius * 0.2, this.radius * 0.14, 0, Math.PI * 2);
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.4, -this.radius * 0.25, this.radius * 0.05, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.9, 0, this.radius * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = '#fca5a5';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.radius * 0.85, -this.radius * 0.05); ctx.lineTo(this.radius * 1.3, -this.radius * 0.25);
+        ctx.moveTo(this.radius * 0.85, this.radius * 0.05); ctx.lineTo(this.radius * 1.3, this.radius * 0.3);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+// --------------------------------------------------------------------------
+// NATASHA: ESCENA ESPECIAL DE VICTORIA
+// --------------------------------------------------------------------------
+class NatashaGirl {
+    constructor(x, y, facingRight) {
+        this.x = x;
+        this.y = y;
+        this.facingRight = facingRight;
+        this.walkCycle = 0;
+        this.armRaise = 0;
+    }
+
+    update(step = 1) {
+        this.walkCycle = (this.walkCycle + 0.2 * step) % (Math.PI * 2);
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (!this.facingRight) ctx.scale(-1, 1);
+
+        ctx.beginPath();
+        ctx.ellipse(0, 24, 20, 7, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fill();
+
+        const legSwing = this.armRaise > 0.5 ? 0 : Math.sin(this.walkCycle) * 8;
+
+        ctx.strokeStyle = '#fcd9b8';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-6, 14); ctx.lineTo(-6 + legSwing, 26);
+        ctx.moveTo(6, 14); ctx.lineTo(6 - legSwing, 26);
+        ctx.stroke();
+
+        ctx.fillStyle = '#d6336c';
+        ctx.beginPath(); ctx.arc(-6 + legSwing, 27, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(6 - legSwing, 27, 4, 0, Math.PI * 2); ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-16, 14);
+        ctx.lineTo(16, 14);
+        ctx.lineTo(10, -12);
+        ctx.lineTo(-10, -12);
+        ctx.closePath();
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.strokeStyle = '#fcd9b8';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(9, -6);
+        ctx.lineTo(9 + 12, -6 - this.armRaise * 12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-9, -6);
+        ctx.lineTo(-9 - 8 - this.armRaise * 4, -2 - this.armRaise * 8);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -22, 14, 0, Math.PI * 2);
+        ctx.fillStyle = '#fcd9b8';
+        ctx.fill();
+
+        ctx.fillStyle = '#5b3a29';
+        ctx.beginPath(); ctx.arc(-13, -20, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(13, -20, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -31, 12, Math.PI, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath(); ctx.arc(-13, -26, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(13, -26, 3, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#3d2b1f';
+        ctx.beginPath(); ctx.arc(-4, -22, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, -22, 1.6, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = '#c2410c';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, -18, 4, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.4)';
+        ctx.beginPath(); ctx.arc(-8, -18, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(8, -18, 2.5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+// --------------------------------------------------------------------------
+// TEMAS VISUALES DE LAS 5 ETAPAS DE AVENTURA
+// --------------------------------------------------------------------------
+const LEVEL_THEMES = [
+    { name: 'Selva Verde', bg: ['#0a2318', '#0e3322', '#06170f'], accent: 'rgba(253, 224, 71, 0.04)', treeSilhouette: '#061e14', bushColors: ['#15803d', '#166534'], groundColor: '#3f2212', groundBorder: '#542f19', groundSpot: '#6b3d22' },
+    { name: 'Playa Tropical', bg: ['#0a3b4a', '#125064', '#062733'], accent: 'rgba(255, 255, 255, 0.05)', treeSilhouette: '#0c2f38', bushColors: ['#0d9488', '#0f766e'], groundColor: '#2b8fae', groundBorder: '#1e6f88', groundSpot: '#7dd3fc' },
+    { name: 'Selva Nevada', bg: ['#243447', '#31465e', '#141d29'], accent: 'rgba(255, 255, 255, 0.09)', treeSilhouette: '#1b2634', bushColors: ['#e2e8f0', '#cbd5e1'], groundColor: '#dbeafe', groundBorder: '#93c5fd', groundSpot: '#f0f9ff' },
+    { name: 'Selva Nocturna', bg: ['#120a2e', '#1e0f4d', '#08041a'], accent: 'rgba(168, 85, 247, 0.06)', treeSilhouette: '#0c0620', bushColors: ['#4c1d95', '#5b21b6'], groundColor: '#1e1b4b', groundBorder: '#3730a3', groundSpot: '#818cf8' },
+    { name: 'Guarida del Súper Ratón', bg: ['#3a0d0d', '#5c1414', '#1f0505'], accent: 'rgba(239, 68, 68, 0.07)', treeSilhouette: '#2a0808', bushColors: ['#7f1d1d', '#991b1b'], groundColor: '#450a0a', groundBorder: '#7f1d1d', groundSpot: '#f87171' }
+];
+
+// --------------------------------------------------------------------------
 // 4. RENDERIZADO DE LA SELVA (JUNGLE ENVIRONMENT)
 // --------------------------------------------------------------------------
 class JungleEnvironment {
     constructor(canvasWidth, canvasHeight) {
         this.width = canvasWidth;
         this.height = canvasHeight;
+        this.theme = LEVEL_THEMES[0];
 
         this.trees = [];
         this.bushes = [];
@@ -806,6 +1260,11 @@ class JungleEnvironment {
     resize(w, h) {
         this.width = w;
         this.height = h;
+        this.generateTerrain();
+    }
+
+    setTheme(theme) {
+        this.theme = theme;
         this.generateTerrain();
     }
 
@@ -832,7 +1291,7 @@ class JungleEnvironment {
                 x: 100 + Math.random() * (this.width - 200),
                 y: 120 + Math.random() * (this.height - 240),
                 radius: 38 + Math.random() * 25,
-                color: Math.random() > 0.5 ? '#15803d' : '#166534'
+                color: Math.random() > 0.5 ? this.theme.bushColors[0] : this.theme.bushColors[1]
             });
         }
 
@@ -967,15 +1426,16 @@ class JungleEnvironment {
     }
 
     drawBackground(ctx) {
+        const theme = this.theme;
         const bgGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-        bgGrad.addColorStop(0, '#0a2318');
-        bgGrad.addColorStop(0.5, '#0e3322');
-        bgGrad.addColorStop(1, '#06170f');
+        bgGrad.addColorStop(0, theme.bg[0]);
+        bgGrad.addColorStop(0.5, theme.bg[1]);
+        bgGrad.addColorStop(1, theme.bg[2]);
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, this.width, this.height);
 
         ctx.save();
-        ctx.fillStyle = 'rgba(253, 224, 71, 0.04)';
+        ctx.fillStyle = theme.accent;
         for (let i = 0; i < 5; i++) {
             ctx.beginPath();
             ctx.moveTo(i * (this.width / 4) - 50, 0);
@@ -987,7 +1447,7 @@ class JungleEnvironment {
         }
         ctx.restore();
 
-        ctx.fillStyle = '#061e14';
+        ctx.fillStyle = theme.treeSilhouette;
         for (const tree of this.trees) {
             ctx.fillRect(tree.x, tree.y, tree.trunkWidth, this.height);
             ctx.beginPath();
@@ -998,13 +1458,13 @@ class JungleEnvironment {
         for (const mud of this.mudPuddles) {
             ctx.beginPath();
             ctx.ellipse(mud.x, mud.y, mud.rx, mud.ry, 0, 0, Math.PI * 2);
-            ctx.fillStyle = '#3f2212';
+            ctx.fillStyle = theme.groundColor;
             ctx.fill();
-            ctx.strokeStyle = '#542f19';
+            ctx.strokeStyle = theme.groundBorder;
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            ctx.fillStyle = '#6b3d22';
+            ctx.fillStyle = theme.groundSpot;
             ctx.beginPath();
             ctx.arc(mud.x - mud.rx * 0.3, mud.y - 2, 4, 0, Math.PI * 2);
             ctx.arc(mud.x + mud.rx * 0.2, mud.y + 4, 3, 0, Math.PI * 2);
@@ -1111,7 +1571,25 @@ class JungleEnvironment {
 }
 
 // --------------------------------------------------------------------------
-// 5. GESTOR DE INTERFAZ DE USUARIO (UI MANAGER)
+// 5. TIENDA DE LA SELVA (ACCESORIOS & POTENCIADORES)
+// --------------------------------------------------------------------------
+const SHOP_ACCESSORIES = [
+    { id: 'flower', name: 'Flor Tropical', icon: '🌸', price: 15, desc: 'Una flor selvática en la oreja' },
+    { id: 'bow', name: 'Moño Rosa', icon: '🎀', price: 20, desc: 'Un lindo moño para lucir' },
+    { id: 'scarf', name: 'Bufanda', icon: '🧣', price: 25, desc: 'Bien abrigado en la selva' },
+    { id: 'glasses', name: 'Lentes Cool', icon: '🕶️', price: 30, desc: 'Para la caza con estilo' },
+    { id: 'crown', name: 'Corona Real', icon: '👑', price: 50, desc: 'Eres la realeza de la selva' }
+];
+
+const SHOP_POWERUPS = [
+    { id: 'lucky_start', name: 'Hierba de la Suerte', icon: '🌿', price: 35, desc: 'Empieza cada partida con Súper Velocidad' },
+    { id: 'quick_pounce', name: 'Salto Rápido', icon: '⚡', price: 60, desc: 'El enfriamiento del salto es 25% más corto' },
+    { id: 'extra_time', name: 'Tiempo Extra', icon: '⏱️', price: 40, desc: '+10 segundos en cada nivel' },
+    { id: 'cheese_stock', name: 'Reserva de Queso', icon: '🧀', price: 30, desc: '+4 quesos para el Súper Ratón final' }
+];
+
+// --------------------------------------------------------------------------
+// 6. GESTOR DE INTERFAZ DE USUARIO (UI MANAGER)
 // --------------------------------------------------------------------------
 class UIManager {
     constructor(callbacks) {
@@ -1137,14 +1615,82 @@ class UIManager {
         this.comboText = document.getElementById('combo-text');
         this.startHighScore = document.getElementById('start-high-score');
 
+        this.milestoneBanner = document.getElementById('milestone-banner');
+        this.milestoneText = document.getElementById('milestone-text');
+        this.hudLevelCard = document.getElementById('hud-level-card');
+        this.levelText = document.getElementById('level-text');
+        this.hairballText = document.getElementById('hairball-text');
+        this.startHairballs = document.getElementById('start-hairballs');
+        this.shopHairballs = document.getElementById('shop-hairballs');
+        this.bossHealthBar = document.getElementById('boss-health-bar');
+        this.bossHealthFill = document.getElementById('boss-health-fill');
+        this.screenShop = document.getElementById('screen-shop');
+        this.screenVictory = document.getElementById('screen-victory');
+
         this.btnSound = document.getElementById('btn-sound');
         this.btnHomeHud = document.getElementById('btn-home-hud');
         this.btnPause = document.getElementById('btn-pause');
-        
+
         this.highScore = parseInt(localStorage.getItem('pink_cat_high_score') || '0', 10);
+        this.hairballs = parseInt(localStorage.getItem('pink_cat_hairballs') || '0', 10);
+        this.ownedAccessories = JSON.parse(localStorage.getItem('pink_cat_owned_accessories') || '[]');
+        this.equippedAccessory = localStorage.getItem('pink_cat_equipped_accessory') || null;
+        this.ownedPowerups = JSON.parse(localStorage.getItem('pink_cat_owned_powerups') || '[]');
+
         this.updateStartHighScoreDisplay();
+        this.updateHairballDisplays();
 
         this.bindEvents();
+    }
+
+    updateHairballDisplays() {
+        const text = this.hairballs.toLocaleString();
+        if (this.startHairballs) this.startHairballs.textContent = text;
+        if (this.shopHairballs) this.shopHairballs.textContent = text;
+        if (this.hairballText) this.hairballText.textContent = text;
+    }
+
+    addHairballs(amount) {
+        if (amount <= 0) return;
+        this.hairballs += amount;
+        localStorage.setItem('pink_cat_hairballs', this.hairballs.toString());
+        this.updateHairballDisplays();
+    }
+
+    spendHairballs(amount) {
+        if (amount > this.hairballs) return false;
+        this.hairballs -= amount;
+        localStorage.setItem('pink_cat_hairballs', this.hairballs.toString());
+        this.updateHairballDisplays();
+        return true;
+    }
+
+    ownsAccessory(id) {
+        return this.ownedAccessories.includes(id);
+    }
+
+    buyAccessory(id, price) {
+        if (this.ownsAccessory(id) || !this.spendHairballs(price)) return false;
+        this.ownedAccessories.push(id);
+        localStorage.setItem('pink_cat_owned_accessories', JSON.stringify(this.ownedAccessories));
+        this.equipAccessory(id);
+        return true;
+    }
+
+    equipAccessory(id) {
+        this.equippedAccessory = this.equippedAccessory === id ? null : id;
+        localStorage.setItem('pink_cat_equipped_accessory', this.equippedAccessory || '');
+    }
+
+    ownsPowerup(id) {
+        return this.ownedPowerups.includes(id);
+    }
+
+    buyPowerup(id, price) {
+        if (this.ownsPowerup(id) || !this.spendHairballs(price)) return false;
+        this.ownedPowerups.push(id);
+        localStorage.setItem('pink_cat_owned_powerups', JSON.stringify(this.ownedPowerups));
+        return true;
     }
 
     bindEvents() {
@@ -1226,7 +1772,148 @@ class UIManager {
             });
         }
 
+        const victoryMenuBtn = document.getElementById('btn-victory-menu');
+        if (victoryMenuBtn) {
+            victoryMenuBtn.addEventListener('click', () => {
+                this.callbacks.onGoToMainMenu();
+            });
+        }
+
+        const openShopBtn = document.getElementById('btn-open-shop');
+        if (openShopBtn) {
+            openShopBtn.addEventListener('click', () => {
+                sound.init();
+                this.showShop();
+            });
+        }
+
+        const closeShopBtn = document.getElementById('btn-close-shop');
+        if (closeShopBtn) {
+            closeShopBtn.addEventListener('click', () => {
+                this.hideShop();
+            });
+        }
+
+        const tabAccessories = document.getElementById('tab-accessories');
+        const tabPowerups = document.getElementById('tab-powerups');
+        if (tabAccessories && tabPowerups) {
+            tabAccessories.addEventListener('click', () => this.switchShopTab('accessories'));
+            tabPowerups.addEventListener('click', () => this.switchShopTab('powerups'));
+        }
+
         this.setupTouchControls();
+    }
+
+    switchShopTab(tab) {
+        const tabAccessories = document.getElementById('tab-accessories');
+        const tabPowerups = document.getElementById('tab-powerups');
+        const gridAccessories = document.getElementById('shop-grid-accessories');
+        const gridPowerups = document.getElementById('shop-grid-powerups');
+
+        const isAccessories = tab === 'accessories';
+        tabAccessories.classList.toggle('active', isAccessories);
+        tabPowerups.classList.toggle('active', !isAccessories);
+        gridAccessories.classList.toggle('hidden', !isAccessories);
+        gridPowerups.classList.toggle('hidden', isAccessories);
+    }
+
+    showShop() {
+        this.renderShopGrid('accessories', SHOP_ACCESSORIES, document.getElementById('shop-grid-accessories'));
+        this.renderShopGrid('powerups', SHOP_POWERUPS, document.getElementById('shop-grid-powerups'));
+        this.switchShopTab('accessories');
+        if (this.screenStart) this.screenStart.classList.add('hidden');
+        if (this.screenShop) this.screenShop.classList.remove('hidden');
+    }
+
+    hideShop() {
+        if (this.screenShop) this.screenShop.classList.add('hidden');
+        if (this.screenStart) this.screenStart.classList.remove('hidden');
+    }
+
+    renderShopGrid(kind, items, container) {
+        if (!container) return;
+        container.innerHTML = '';
+
+        for (const item of items) {
+            const owned = kind === 'accessories' ? this.ownsAccessory(item.id) : this.ownsPowerup(item.id);
+            const equipped = kind === 'accessories' && this.equippedAccessory === item.id;
+            const canAfford = this.hairballs >= item.price;
+
+            const card = document.createElement('div');
+            card.className = 'shop-item';
+
+            const btnLabel = owned
+                ? (kind === 'accessories' ? (equipped ? '✅ Equipado' : 'Usar') : '✅ Comprado')
+                : `🧶 ${item.price}`;
+            const btnDisabled = !owned && !canAfford;
+
+            card.innerHTML = `
+                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-name">${item.name}</div>
+                <div class="shop-item-desc">${item.desc}</div>
+                <button class="shop-item-btn ${equipped ? 'equipped' : ''}" ${btnDisabled ? 'disabled' : ''}>${btnLabel}</button>
+            `;
+
+            const btn = card.querySelector('.shop-item-btn');
+            btn.addEventListener('click', () => {
+                if (kind === 'accessories') {
+                    if (this.ownsAccessory(item.id)) {
+                        this.equipAccessory(item.id);
+                    } else {
+                        this.buyAccessory(item.id, item.price);
+                    }
+                } else {
+                    if (!this.ownsPowerup(item.id)) {
+                        this.buyPowerup(item.id, item.price);
+                    }
+                }
+                this.renderShopGrid(kind, items, container);
+            });
+
+            container.appendChild(card);
+        }
+    }
+
+    showMilestone(text) {
+        if (this.milestoneText) this.milestoneText.textContent = text;
+        if (this.milestoneBanner) {
+            this.milestoneBanner.classList.remove('hidden');
+            clearTimeout(this._milestoneTimeout);
+            this._milestoneTimeout = setTimeout(() => {
+                if (this.milestoneBanner) this.milestoneBanner.classList.add('hidden');
+            }, 1800);
+        }
+    }
+
+    updateLevelDisplay(level, maxLevel) {
+        if (!this.hudLevelCard || !this.levelText) return;
+        if (maxLevel > 0) {
+            this.hudLevelCard.classList.remove('hidden');
+            this.levelText.textContent = `${level}/${maxLevel}`;
+        } else {
+            this.hudLevelCard.classList.add('hidden');
+        }
+    }
+
+    updateBossHealth(pct) {
+        if (pct === null) {
+            if (this.bossHealthBar) this.bossHealthBar.classList.add('hidden');
+            return;
+        }
+        if (this.bossHealthBar) this.bossHealthBar.classList.remove('hidden');
+        if (this.bossHealthFill) this.bossHealthFill.style.width = `${Math.max(0, pct) * 100}%`;
+    }
+
+    showVictory(stats) {
+        const scoreEl = document.getElementById('victory-stat-score');
+        const hairballsEl = document.getElementById('victory-stat-hairballs');
+        if (scoreEl) scoreEl.textContent = stats.totalScore.toLocaleString();
+        if (hairballsEl) hairballsEl.textContent = `+${stats.hairballsEarned}`;
+
+        this.addHairballs(stats.hairballsEarned);
+        this.checkHighScore(stats.totalScore);
+        if (this.screenVictory) this.screenVictory.classList.remove('hidden');
+        sound.playLevelClear();
     }
 
     setupTouchControls() {
@@ -1237,6 +1924,30 @@ class UIManager {
                 this.callbacks.onPounce();
             });
         }
+
+        const cheeseBtn = document.getElementById('btn-touch-cheese');
+        if (cheeseBtn) {
+            cheeseBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.callbacks.onThrowCheese();
+            });
+        }
+    }
+
+    setBossMode(active, cheeseCount = 0) {
+        const cheeseBtn = document.getElementById('btn-touch-cheese');
+        if (cheeseBtn) cheeseBtn.classList.toggle('hidden', !active);
+
+        if (active) {
+            this.updateCheeseStock(cheeseCount);
+        } else {
+            this.updateBossHealth(null);
+        }
+    }
+
+    updateCheeseStock(count) {
+        const el = document.getElementById('touch-cheese-count');
+        if (el) el.textContent = `x${count}`;
     }
 
     updateStartHighScoreDisplay() {
@@ -1260,8 +1971,11 @@ class UIManager {
         if (this.screenPause) this.screenPause.classList.add('hidden');
         if (this.screenLevelClear) this.screenLevelClear.classList.add('hidden');
         if (this.screenGameOver) this.screenGameOver.classList.add('hidden');
+        if (this.screenVictory) this.screenVictory.classList.add('hidden');
+        if (this.screenShop) this.screenShop.classList.add('hidden');
         if (this.hud) this.hud.classList.add('hidden');
         if (this.touchControls) this.touchControls.classList.add('hidden');
+        this.updateHairballDisplays();
     }
 
     showHUD(isMobile = false) {
@@ -1269,6 +1983,8 @@ class UIManager {
         if (this.screenPause) this.screenPause.classList.add('hidden');
         if (this.screenLevelClear) this.screenLevelClear.classList.add('hidden');
         if (this.screenGameOver) this.screenGameOver.classList.add('hidden');
+        if (this.screenVictory) this.screenVictory.classList.add('hidden');
+        if (this.screenShop) this.screenShop.classList.add('hidden');
         if (this.hud) this.hud.classList.remove('hidden');
 
         if (isMobile && this.touchControls) {
@@ -1289,11 +2005,15 @@ class UIManager {
         const scoreEl = document.getElementById('stat-level-score');
         const bonusEl = document.getElementById('stat-time-bonus');
         const totalEl = document.getElementById('stat-total-score');
+        const hairballsEl = document.getElementById('stat-hairballs-earned');
 
         if (miceEl) miceEl.textContent = stats.miceCaught;
         if (scoreEl) scoreEl.textContent = stats.levelScore.toLocaleString();
         if (bonusEl) bonusEl.textContent = `+${stats.timeBonus.toLocaleString()}`;
         if (totalEl) totalEl.textContent = stats.totalScore.toLocaleString();
+        if (hairballsEl) hairballsEl.textContent = `+${stats.hairballsEarned}`;
+
+        this.addHairballs(stats.hairballsEarned);
 
         if (this.screenLevelClear) this.screenLevelClear.classList.remove('hidden');
         sound.playLevelClear();
@@ -1302,9 +2022,13 @@ class UIManager {
     showGameOver(stats) {
         const miceEl = document.getElementById('go-stat-mice');
         const scoreEl = document.getElementById('go-stat-score');
+        const hairballsEl = document.getElementById('go-stat-hairballs');
 
         if (miceEl) miceEl.textContent = stats.miceCaught;
         if (scoreEl) scoreEl.textContent = stats.totalScore.toLocaleString();
+        if (hairballsEl) hairballsEl.textContent = `+${stats.hairballsEarned}`;
+
+        this.addHairballs(stats.hairballsEarned);
 
         const isNewRecord = this.checkHighScore(stats.totalScore);
         const recordTag = document.getElementById('new-high-score-tag');
@@ -1356,8 +2080,12 @@ const GAME_STATES = {
     PLAYING: 'PLAYING',
     PAUSED: 'PAUSED',
     LEVEL_CLEAR: 'LEVEL_CLEAR',
-    GAME_OVER: 'GAME_OVER'
+    GAME_OVER: 'GAME_OVER',
+    VICTORY_SCENE: 'VICTORY_SCENE',
+    VICTORY: 'VICTORY'
 };
+
+const MAX_ADVENTURE_LEVEL = 5;
 
 class GameEngine {
     constructor() {
@@ -1386,6 +2114,19 @@ class GameEngine {
         this.comboCount = 0;
         this.comboTimer = 0;
 
+        this.sessionMiceCaught = 0;
+        this.sessionBestCombo = 0;
+
+        this.boss = null;
+        this.thrownCheeses = [];
+        this.cheeseStock = 0;
+
+        this.natasha = null;
+        this.victoryHearts = [];
+        this.victoryPhase = null;
+        this.victoryPhaseTimer = 0;
+        this.natashaTargetX = 0;
+
         this.cat = new PinkCat(this.width / 2, this.height / 2);
         this.mice = [];
         this.cheeses = [];
@@ -1401,7 +2142,8 @@ class GameEngine {
             onRestartLevel: () => this.restartLevel(),
             onNextLevel: () => this.nextLevel(),
             onGoToMainMenu: () => this.goToMainMenu(),
-            onPounce: () => this.cat.pounce()
+            onPounce: () => this.cat.pounce(),
+            onThrowCheese: () => this.throwCheeseAtBoss()
         });
 
         this.bindEvents();
@@ -1441,6 +2183,11 @@ class GameEngine {
             if (e.code === 'Space' && this.state === GAME_STATES.PLAYING) {
                 e.preventDefault();
                 this.cat.pounce();
+            }
+
+            if (e.code === 'KeyC' && this.state === GAME_STATES.PLAYING) {
+                e.preventDefault();
+                this.throwCheeseAtBoss();
             }
 
             if ((e.code === 'KeyP' || e.code === 'Escape') && (this.state === GAME_STATES.PLAYING || this.state === GAME_STATES.PAUSED)) {
@@ -1524,39 +2271,76 @@ class GameEngine {
         this.mode = mode;
         this.currentLevel = 1;
         this.score = 0;
+        this.sessionMiceCaught = 0;
+        this.sessionBestCombo = 0;
         this.initLevel();
         this.state = GAME_STATES.PLAYING;
         this.ui.showHUD(this.isMobile);
         sound.playMeow();
+        sound.startMusic();
     }
 
     initLevel() {
         this.levelScore = 0;
         this.miceCaught = 0;
         this.comboCount = 0;
+        this.boss = null;
+        this.thrownCheeses = [];
+        this.cheeseStock = 0;
+        this.natasha = null;
+        this.victoryHearts = [];
 
-        if (this.mode === 'adventure') {
-            this.miceTarget = 10 + this.currentLevel * 5;
-            this.timer = Math.max(35, 65 - this.currentLevel * 3);
-        } else {
-            this.miceTarget = -1;
-            this.timer = 90;
-        }
+        const isBossLevel = this.mode === 'adventure' && this.currentLevel >= MAX_ADVENTURE_LEVEL;
+
+        const theme = this.mode === 'adventure'
+            ? LEVEL_THEMES[Math.min(this.currentLevel - 1, LEVEL_THEMES.length - 1)]
+            : LEVEL_THEMES[0];
+        this.jungle.setTheme(theme);
 
         this.cat = new PinkCat(this.width / 2, this.height / 2);
+        this.cat.accessory = this.ui.equippedAccessory;
+        if (this.ui.ownsPowerup('quick_pounce')) {
+            this.cat.maxPounceCooldown = Math.round(this.cat.maxPounceCooldown * 0.75);
+        }
+        if (this.currentLevel === 1 && this.ui.ownsPowerup('lucky_start')) {
+            this.cat.activateCatnip();
+        }
+
         this.mice = [];
         this.cheeses = [];
         this.jungle.catnipItems = [];
 
-        const initialMiceCount = Math.min(18, 7 + this.currentLevel * 2);
-        for (let i = 0; i < initialMiceCount; i++) {
-            this.spawnMouse();
+        if (isBossLevel) {
+            this.miceTarget = -1;
+            this.timer = 90;
+            this.cheeseStock = 8 + (this.ui.ownsPowerup('cheese_stock') ? 4 : 0);
+            this.boss = new SuperMouseBoss(this.width / 2, this.height / 2 - 80);
+            this.ui.setBossMode(true, this.cheeseStock);
+        } else {
+            if (this.mode === 'adventure') {
+                this.miceTarget = 10 + this.currentLevel * 5;
+                this.timer = Math.max(35, 65 - this.currentLevel * 3);
+            } else {
+                this.miceTarget = -1;
+                this.timer = 90;
+            }
+
+            const initialMiceCount = Math.min(18, 7 + this.currentLevel * 2);
+            for (let i = 0; i < initialMiceCount; i++) {
+                this.spawnMouse();
+            }
+
+            this.jungle.spawnCatnip(
+                150 + Math.random() * (this.width - 300),
+                150 + Math.random() * (this.height - 300)
+            );
+
+            this.ui.setBossMode(false);
         }
 
-        this.jungle.spawnCatnip(
-            150 + Math.random() * (this.width - 300),
-            150 + Math.random() * (this.height - 300)
-        );
+        if (this.ui.ownsPowerup('extra_time')) {
+            this.timer += 10;
+        }
     }
 
     spawnMouse() {
@@ -1582,9 +2366,11 @@ class GameEngine {
         if (this.state === GAME_STATES.PLAYING) {
             this.state = GAME_STATES.PAUSED;
             this.ui.showPauseScreen();
+            sound.stopMusic();
         } else if (this.state === GAME_STATES.PAUSED) {
             this.state = GAME_STATES.PLAYING;
             this.ui.hidePauseScreen();
+            sound.startMusic();
         }
     }
 
@@ -1592,6 +2378,7 @@ class GameEngine {
         this.initLevel();
         this.state = GAME_STATES.PLAYING;
         this.ui.showHUD(this.isMobile);
+        sound.startMusic();
     }
 
     nextLevel() {
@@ -1600,11 +2387,15 @@ class GameEngine {
         this.state = GAME_STATES.PLAYING;
         this.ui.showHUD(this.isMobile);
         sound.playMeow();
+        sound.startMusic();
     }
 
     goToMainMenu() {
         this.state = GAME_STATES.START;
+        this.natasha = null;
+        this.victoryHearts = [];
         this.ui.showStartScreen();
+        sound.stopMusic();
     }
 
     loop(timestamp) {
@@ -1615,6 +2406,8 @@ class GameEngine {
 
         if (this.state === GAME_STATES.PLAYING) {
             this.update(dt);
+        } else if (this.state === GAME_STATES.VICTORY_SCENE) {
+            this.updateVictoryScene(dt, dt * 60);
         }
 
         this.render();
@@ -1688,11 +2481,15 @@ class GameEngine {
             }
         }
 
-        if (this.mice.length < 10) {
+        if (!this.boss && this.mice.length < 10) {
             this.spawnMouse();
         }
 
-        if (this.mode === 'adventure' && this.miceCaught >= this.miceTarget) {
+        if (this.boss) {
+            this.updateBossFight(step, dt);
+        }
+
+        if (!this.boss && this.mode === 'adventure' && this.miceCaught >= this.miceTarget) {
             this.triggerLevelClear();
         }
 
@@ -1711,11 +2508,166 @@ class GameEngine {
             this.cat.pounceCooldown / this.cat.maxPounceCooldown,
             powerupState
         );
+
+        this.ui.updateLevelDisplay(this.currentLevel, this.mode === 'adventure' ? MAX_ADVENTURE_LEVEL : 0);
+    }
+
+    updateBossFight(step, dt) {
+        this.boss.update(this.cat, this.width, this.height, step, dt);
+
+        const distToBoss = Math.hypot(this.cat.x - this.boss.x, this.cat.y - this.boss.y);
+        const catchDistance = this.cat.radius + this.boss.radius + (this.cat.isPouncing ? 16 : 0);
+
+        if (this.boss.state === 'DISTRACTED' && distToBoss < catchDistance) {
+            this.hitBoss();
+            if (!this.boss) return; // el jefe fue derrotado y comenzó la escena de victoria
+        }
+
+        for (let i = this.thrownCheeses.length - 1; i >= 0; i--) {
+            const tc = this.thrownCheeses[i];
+            tc.update(step);
+
+            const dCheese = Math.hypot(tc.x - this.boss.x, tc.y - this.boss.y);
+            if (this.boss.state === 'ROAMING' && dCheese < this.boss.radius + tc.radius) {
+                this.boss.distract();
+                this.jungle.addScorePopup(this.boss.x, this.boss.y, '¡A COMER! 🧀', '#facc15');
+                this.thrownCheeses.splice(i, 1);
+                continue;
+            }
+
+            if (tc.life <= 0 || tc.x < 0 || tc.x > this.width || tc.y < 0 || tc.y > this.height) {
+                this.thrownCheeses.splice(i, 1);
+            }
+        }
+
+        this.ui.updateBossHealth(this.boss.health / this.boss.maxHealth);
+    }
+
+    hitBoss() {
+        this.boss.takeHit();
+        this.jungle.addCatchParticles(this.boss.x, this.boss.y, '#facc15');
+        sound.playCatch();
+
+        if (this.boss.state === 'DEFEATED') {
+            this.startVictoryScene();
+        } else {
+            this.jungle.addScorePopup(this.boss.x, this.boss.y, '¡GOLPE!', '#ef4444');
+        }
+    }
+
+    startVictoryScene() {
+        this.state = GAME_STATES.VICTORY_SCENE;
+        this.boss = null;
+        this.thrownCheeses = [];
+        sound.stopMusic();
+
+        this.cat.isPouncing = false;
+        this.cat.vx = 0;
+        this.cat.vy = 0;
+        this.cat.isMoving = false;
+
+        const enterFromRight = this.cat.x < this.width / 2;
+        const startX = enterFromRight ? this.width + 60 : -60;
+        this.natasha = new NatashaGirl(startX, this.cat.y, !enterFromRight);
+        this.natashaTargetX = this.cat.x + (enterFromRight ? 36 : -36);
+        this.cat.facingRight = enterFromRight;
+
+        this.victoryHearts = [];
+        this.victoryPhase = 'walking';
+        this.victoryPhaseTimer = 0;
+
+        this.ui.setBossMode(false);
+    }
+
+    updateVictoryScene(dt, step) {
+        this.jungle.update(step);
+
+        if (this.victoryPhase === 'walking') {
+            const dir = this.natashaTargetX > this.natasha.x ? 1 : -1;
+            this.natasha.x += dir * 3.4 * step;
+            this.natasha.update(step);
+
+            if (Math.abs(this.natasha.x - this.natashaTargetX) < 6) {
+                this.natasha.x = this.natashaTargetX;
+                this.victoryPhase = 'hugging';
+                this.victoryPhaseTimer = 0;
+                this.cat.isHappy = true;
+                sound.playMeow();
+                this.jungle.addScorePopup(this.cat.x, this.cat.y - 55, '¡MIAU! 💕', '#ff4794');
+            }
+        } else if (this.victoryPhase === 'hugging') {
+            const prevTimer = this.victoryPhaseTimer;
+            this.victoryPhaseTimer += dt;
+            this.natasha.armRaise = Math.min(1, this.victoryPhaseTimer * 2);
+            this.natasha.update(step * 0.25);
+
+            if (Math.floor(this.victoryPhaseTimer * 3) !== Math.floor(prevTimer * 3)) {
+                this.spawnVictoryHeart();
+            }
+
+            if (this.victoryPhaseTimer >= 3) {
+                this.triggerVictory();
+            }
+        }
+
+        for (let i = this.victoryHearts.length - 1; i >= 0; i--) {
+            const h = this.victoryHearts[i];
+            h.x += h.vx * step;
+            h.y += h.vy * step;
+            h.alpha -= 0.012 * step;
+            h.scale = Math.min(1.2, h.scale + 0.02 * step);
+            if (h.alpha <= 0) this.victoryHearts.splice(i, 1);
+        }
+    }
+
+    spawnVictoryHeart() {
+        const midX = (this.cat.x + this.natasha.x) / 2;
+        const midY = this.cat.y - 40;
+        const icons = ['💗', '💕', '✨', '💖'];
+        this.victoryHearts.push({
+            x: midX + (Math.random() - 0.5) * 30,
+            y: midY,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: -1.2 - Math.random() * 0.8,
+            alpha: 1,
+            scale: 0.6,
+            icon: icons[Math.floor(Math.random() * icons.length)]
+        });
+    }
+
+    drawVictoryHearts(ctx) {
+        if (this.victoryHearts.length === 0) return;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const h of this.victoryHearts) {
+            ctx.globalAlpha = Math.max(0, h.alpha);
+            ctx.font = `${Math.round(18 * h.scale)}px sans-serif`;
+            ctx.fillText(h.icon, h.x, h.y);
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+    }
+
+    throwCheeseAtBoss() {
+        if (!this.boss || this.boss.state === 'DEFEATED' || this.cheeseStock <= 0) return;
+
+        this.cheeseStock--;
+        this.ui.updateCheeseStock(this.cheeseStock);
+
+        const dx = this.boss.x - this.cat.x;
+        const dy = this.boss.y - this.cat.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 9;
+
+        this.thrownCheeses.push(new ThrownCheese(this.cat.x, this.cat.y, (dx / dist) * speed, (dy / dist) * speed));
+        sound.playPounce();
     }
 
     catchMouse(mouse, index) {
         this.mice.splice(index, 1);
         this.miceCaught++;
+        this.sessionMiceCaught++;
 
         this.comboCount++;
         this.comboTimer = 2.5;
@@ -1739,6 +2691,8 @@ class GameEngine {
             this.cheeses.push(new CheeseDrop(mouse.x, mouse.y));
         }
 
+        this.checkMilestones();
+
         setTimeout(() => {
             if (this.state === GAME_STATES.PLAYING) {
                 this.spawnMouse();
@@ -1746,24 +2700,63 @@ class GameEngine {
         }, 1200);
     }
 
+    checkMilestones() {
+        if (this.sessionMiceCaught > 0 && this.sessionMiceCaught % 5 === 0) {
+            this.ui.addHairballs(5);
+            this.cat.activateMagnet();
+            this.ui.showMilestone(`🐭 ¡${this.sessionMiceCaught} RATONES! +5 🧶`);
+        }
+
+        if (this.comboCount > this.sessionBestCombo) {
+            this.sessionBestCombo = this.comboCount;
+            if (this.comboCount >= 3) {
+                this.ui.addHairballs(8);
+                this.cat.activateCatnip(300);
+                this.ui.showMilestone(`🔥 ¡NUEVO RÉCORD DE COMBO x${this.comboCount}! +8 🧶`);
+            }
+        }
+    }
+
+    computeHairballs(scoreAmount) {
+        return Math.max(1, Math.round(scoreAmount / 150));
+    }
+
     triggerLevelClear() {
         this.state = GAME_STATES.LEVEL_CLEAR;
+        sound.stopMusic();
         const timeBonus = Math.round(this.timer * 50);
         this.score += timeBonus;
+        const hairballsEarned = this.computeHairballs(this.levelScore + timeBonus);
 
         this.ui.showLevelClear({
             miceCaught: this.miceCaught,
             levelScore: this.levelScore,
             timeBonus: timeBonus,
-            totalScore: this.score
+            totalScore: this.score,
+            hairballsEarned: hairballsEarned
         });
     }
 
     triggerGameOver() {
         this.state = GAME_STATES.GAME_OVER;
+        sound.stopMusic();
+        const hairballsEarned = this.computeHairballs(this.levelScore);
         this.ui.showGameOver({
             miceCaught: this.miceCaught,
-            totalScore: this.score
+            totalScore: this.score,
+            hairballsEarned: hairballsEarned
+        });
+    }
+
+    triggerVictory() {
+        this.state = GAME_STATES.VICTORY;
+        this.score += 500;
+        const hairballsEarned = this.computeHairballs(this.levelScore) + 50;
+        this.ui.setBossMode(false);
+
+        this.ui.showVictory({
+            totalScore: this.score,
+            hairballsEarned: hairballsEarned
         });
     }
 
@@ -1782,7 +2775,21 @@ class GameEngine {
             mouse.draw(this.ctx);
         }
 
+        if (this.boss) {
+            this.boss.draw(this.ctx);
+        }
+
         this.cat.draw(this.ctx);
+
+        if (this.natasha) {
+            this.natasha.draw(this.ctx);
+        }
+
+        for (const tc of this.thrownCheeses) {
+            tc.draw(this.ctx);
+        }
+
+        this.drawVictoryHearts(this.ctx);
 
         this.jungle.drawForeground(this.ctx);
     }

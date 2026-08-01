@@ -77,8 +77,9 @@ html, body {
 
 .hud-top-bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 16px;
+    gap: 10px 16px;
     pointer-events: auto;
 }
 
@@ -573,6 +574,250 @@ kbd {
 }
 
 /* --------------------------------------------------------------------------
+   INSIGNIAS, TIENDA Y NUEVAS MECÁNICAS
+   -------------------------------------------------------------------------- */
+.badges-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.high-score-badge {
+    flex: 1;
+}
+
+.hairball-badge {
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #d6b98c;
+    background: rgba(214, 185, 140, 0.12);
+    border: 1px solid rgba(214, 185, 140, 0.35);
+    border-radius: 12px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.credit-footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 18px;
+    line-height: 1.5;
+}
+
+.credit-footer strong {
+    color: var(--color-pink-light);
+}
+
+.btn-shop {
+    background: linear-gradient(135deg, #d6b98c 0%, #a9825a 100%);
+    color: #2b1a0d;
+    box-shadow: 0 8px 24px rgba(214, 185, 140, 0.35);
+    margin-bottom: 16px;
+}
+
+/* Pantalla de la Tienda */
+.shop-panel {
+    max-width: 620px;
+}
+
+.shop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.shop-header h2 {
+    font-family: var(--font-heading);
+    color: #fff;
+    font-size: 1.4rem;
+}
+
+.shop-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 12px;
+}
+
+.shop-tab {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-glass-border);
+    color: #d1fae5;
+    font-weight: 700;
+    font-family: var(--font-body);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.shop-tab.active {
+    background: var(--color-pink-main);
+    color: #fff;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 4px;
+}
+
+.shop-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 16px;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.shop-item-icon {
+    font-size: 2rem;
+}
+
+.shop-item-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.shop-item-desc {
+    font-size: 0.68rem;
+    color: #a7f3d0;
+    min-height: 26px;
+}
+
+.shop-item-btn {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: var(--font-body);
+    background: linear-gradient(135deg, #d6b98c 0%, #a9825a 100%);
+    color: #2b1a0d;
+}
+
+.shop-item-btn:disabled {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.4);
+    cursor: default;
+}
+
+.shop-item-btn.equipped {
+    background: linear-gradient(135deg, #22c55e, #059669);
+    color: #fff;
+}
+
+.hairball-row strong {
+    color: #d6b98c;
+}
+
+/* HUD: Etapa y Bolas de Pelo */
+.hairball-card .hud-value {
+    color: #d6b98c;
+}
+
+/* Barra de vida del jefe final */
+.boss-health-container {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(420px, 80%);
+    pointer-events: none;
+}
+
+.boss-label {
+    text-align: center;
+    color: #fca5a5;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+.boss-track {
+    height: 16px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+.boss-fill {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+}
+
+/* Banner de Hitos */
+.milestone-banner {
+    position: absolute;
+    top: 32%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    color: #ffffff;
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    padding: 8px 26px;
+    border-radius: 30px;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+    animation: pop-combo 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-align: center;
+}
+
+.touch-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+/* Botón táctil de lanzar queso */
+.touch-cheese-btn {
+    pointer-events: auto;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #facc15, #ca8a04);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 6px 20px rgba(250, 204, 21, 0.5);
+    color: #2b1a0d;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.touch-cheese-btn span {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.touch-cheese-btn small {
+    font-size: 0.65rem;
+    font-family: var(--font-heading);
+}
+
+.touch-cheese-btn:active {
+    transform: scale(0.92);
+}
+
+/* --------------------------------------------------------------------------
    CLASES DE UTILIDAD
    -------------------------------------------------------------------------- */
 .hidden {
@@ -596,10 +841,30 @@ kbd {
     }
     
     .hud-card {
-        padding: 6px 12px;
+        padding: 5px 10px;
     }
 
     .hud-value {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+    }
+
+    .hud-label {
+        font-size: 0.62rem;
+    }
+
+    .hud-top-bar {
+        gap: 8px 10px;
+    }
+
+    .hud-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .icon-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
     }
 }

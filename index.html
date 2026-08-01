@@ -39,10 +39,28 @@
                     <span id="timer-text" class="hud-value">60</span>s
                 </div>
 
+                <div id="hud-level-card" class="hud-card level-card hidden">
+                    <span class="hud-label">ETAPA</span>
+                    <span id="level-text" class="hud-value">1/5</span>
+                </div>
+
+                <div class="hud-card hairball-card">
+                    <span class="hud-label">🧶</span>
+                    <span id="hairball-text" class="hud-value">0</span>
+                </div>
+
                 <div class="hud-actions">
                     <button id="btn-sound" class="icon-btn" title="Activar/Desactivar Sonido">🔊</button>
                     <button id="btn-home-hud" class="icon-btn" title="Volver al Menú Principal">🏠</button>
                     <button id="btn-pause" class="icon-btn" title="Pausar Juego">⏸️</button>
+                </div>
+            </div>
+
+            <!-- Barra de Vida del Jefe Final -->
+            <div id="boss-health-bar" class="boss-health-container hidden">
+                <div class="bar-label boss-label">👑 SÚPER RATÓN 👑</div>
+                <div class="bar-track boss-track">
+                    <div id="boss-health-fill" class="bar-fill boss-fill" style="width: 100%;"></div>
                 </div>
             </div>
 
@@ -67,6 +85,11 @@
             <!-- Banner de Combos -->
             <div id="combo-banner" class="combo-banner hidden">
                 <span id="combo-text">¡COMBO x2! 🔥</span>
+            </div>
+
+            <!-- Banner de Hitos / Récords -->
+            <div id="milestone-banner" class="milestone-banner hidden">
+                <span id="milestone-text">¡RÉCORD SUPERADO! 🎉</span>
             </div>
         </div>
 
@@ -106,9 +129,45 @@
                     </div>
                 </div>
 
-                <div class="high-score-badge">
-                    🏆 MEJOR PUNTUACIÓN: <span id="start-high-score">0</span>
+                <div class="badges-row">
+                    <div class="high-score-badge">
+                        🏆 MEJOR PUNTUACIÓN: <span id="start-high-score">0</span>
+                    </div>
+                    <div class="hairball-badge">
+                        🧶 <span id="start-hairballs">0</span>
+                    </div>
                 </div>
+
+                <button id="btn-open-shop" class="btn btn-shop btn-wide">
+                    <span class="btn-icon">🛍️</span>
+                    <span class="btn-text">
+                        <strong>TIENDA DE LA SELVA</strong>
+                        <small>Canjea bolas de pelo por accesorios y poderes</small>
+                    </span>
+                </button>
+
+                <p class="credit-footer">Desarrollado con 💗 por Rolando Hernández Mora<br>Inspirado en su hija <strong>Natasha Hernández</strong></p>
+            </div>
+        </div>
+
+        <!-- Pantalla de la Tienda -->
+        <div id="screen-shop" class="overlay-screen hidden">
+            <div class="menu-card glass-panel shop-panel">
+                <div class="shop-header">
+                    <h2>🛍️ TIENDA DE LA SELVA</h2>
+                    <div class="hairball-badge">🧶 <span id="shop-hairballs">0</span></div>
+                </div>
+                <p class="game-subtitle">¡Atrapa ratones para ganar bolas de pelo y gástalas aquí!</p>
+
+                <div class="shop-tabs">
+                    <button id="tab-accessories" class="shop-tab active">🎀 Accesorios</button>
+                    <button id="tab-powerups" class="shop-tab">⚡ Poderes</button>
+                </div>
+
+                <div id="shop-grid-accessories" class="shop-grid"></div>
+                <div id="shop-grid-powerups" class="shop-grid hidden"></div>
+
+                <button id="btn-close-shop" class="btn btn-secondary btn-wide">🏠 Volver al Menú</button>
             </div>
         </div>
 
@@ -149,9 +208,37 @@
                         <span>Puntuación total:</span>
                         <strong id="stat-total-score" class="highlight-text">0</strong>
                     </div>
+                    <div class="stat-row hairball-row">
+                        <span>🧶 Bolas de pelo ganadas:</span>
+                        <strong id="stat-hairballs-earned">+0</strong>
+                    </div>
                 </div>
 
                 <button id="btn-next-level" class="btn btn-primary btn-large btn-wide">🚀 Siguiente Nivel</button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Victoria Final (Jefe Derrotado) -->
+        <div id="screen-victory" class="overlay-screen hidden">
+            <div class="menu-card glass-panel text-center">
+                <div class="victory-icon">👑 🐱 🎉</div>
+                <h2>¡DERROTASTE AL SÚPER RATÓN!</h2>
+                <p>¡El Gato Rosado es la leyenda de toda la selva!</p>
+
+                <div class="stats-box">
+                    <div class="stat-row">
+                        <span>Puntuación final:</span>
+                        <strong id="victory-stat-score" class="highlight-text">0</strong>
+                    </div>
+                    <div class="stat-row hairball-row">
+                        <span>🧶 Bolas de pelo ganadas:</span>
+                        <strong id="victory-stat-hairballs">+0</strong>
+                    </div>
+                </div>
+
+                <div class="menu-buttons">
+                    <button id="btn-victory-menu" class="btn btn-primary btn-wide">🏠 Menú Principal</button>
+                </div>
             </div>
         </div>
 
@@ -172,6 +259,10 @@
                         <strong id="go-stat-score" class="highlight-text">0</strong>
                     </div>
                     <div id="new-high-score-tag" class="new-record-tag hidden">🌟 ¡NUEVO RÉCORD! 🌟</div>
+                    <div class="stat-row hairball-row">
+                        <span>🧶 Bolas de pelo ganadas:</span>
+                        <strong id="go-stat-hairballs">+0</strong>
+                    </div>
                 </div>
 
                 <div class="menu-buttons">
@@ -188,10 +279,16 @@
                     <div id="joystick-stick" class="joystick-stick"></div>
                 </div>
             </div>
-            <button id="btn-touch-pounce" class="touch-pounce-btn">
-                <span>🐱💨</span>
-                <small>SALTO</small>
-            </button>
+            <div class="touch-actions">
+                <button id="btn-touch-cheese" class="touch-cheese-btn hidden">
+                    <span>🧀</span>
+                    <small id="touch-cheese-count">x8</small>
+                </button>
+                <button id="btn-touch-pounce" class="touch-pounce-btn">
+                    <span>🐱💨</span>
+                    <small>SALTO</small>
+                </button>
+            </div>
         </div>
     </div>
 
