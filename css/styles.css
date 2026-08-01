@@ -28,7 +28,12 @@
 
 html, body {
     width: 100%;
-    height: 100%;
+    /* 100% / 100vh en Safari e iPhone/Android se calculan asumiendo que la
+       barra del navegador está oculta, así que el contenido queda más alto
+       de lo visible y la parte de abajo (el joystick) termina tapada por la
+       barra real. 100dvh usa el alto visible de verdad y se ajusta solo. */
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     background-color: var(--color-jungle-dark);
     font-family: var(--font-body);
@@ -42,6 +47,7 @@ html, body {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -72,6 +78,10 @@ html, body {
     flex-direction: column;
     justify-content: space-between;
     padding: 18px 24px;
+    /* Deja espacio extra por si el notch/barra de gestos del celular invade
+       el área del HUD (arriba) o la barra de impulso (abajo). */
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
     z-index: 10;
 }
 
@@ -262,6 +272,8 @@ html, body {
     align-items: center;
     z-index: 20;
     padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     opacity: 1;
     transition: opacity 0.3s ease;
 }
@@ -276,8 +288,8 @@ html, body {
     width: 100%;
     /* Si el contenido no cabe en pantallas cortas (celulares), se desplaza
        dentro de la tarjeta en vez de cortarse e ser imposible de leer. */
-    max-height: calc(100vh - 40px);
-    max-height: calc(100dvh - 40px);
+    max-height: calc(100vh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -510,7 +522,9 @@ kbd {
    -------------------------------------------------------------------------- */
 .touch-controls {
     position: absolute;
-    bottom: 20px;
+    /* env(safe-area-inset-bottom) evita la barra de gestos del iPhone y deja
+       aire extra respecto al borde real de la pantalla en Android/iOS. */
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
     left: 0;
     width: 100%;
     display: flex;
