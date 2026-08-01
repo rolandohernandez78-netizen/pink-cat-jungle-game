@@ -63,6 +63,17 @@
                     <button id="btn-home-hud" class="icon-btn" title="Volver al Menú Principal">🏠</button>
                     <button id="btn-pause" class="icon-btn" title="Pausar Juego">⏸️</button>
                 </div>
+
+                <!-- Anclados aquí (no al centro de la pantalla) para no tapar
+                     la acción del juego; se acomodan solos debajo de esta
+                     barra sin importar si el HUD queda en 1 o 2 filas. -->
+                <div id="combo-banner" class="combo-banner hidden">
+                    <span id="combo-text">¡COMBO x2! 🔥</span>
+                </div>
+
+                <div id="milestone-banner" class="milestone-banner hidden">
+                    <span id="milestone-text">¡RÉCORD SUPERADO! 🎉</span>
+                </div>
             </div>
 
             <!-- Barra de Vida del Jefe Final -->
@@ -89,16 +100,6 @@
                         <div id="powerup-timer-fill" class="badge-fill"></div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Banner de Combos -->
-            <div id="combo-banner" class="combo-banner hidden">
-                <span id="combo-text">¡COMBO x2! 🔥</span>
-            </div>
-
-            <!-- Banner de Hitos / Récords -->
-            <div id="milestone-banner" class="milestone-banner hidden">
-                <span id="milestone-text">¡RÉCORD SUPERADO! 🎉</span>
             </div>
         </div>
 

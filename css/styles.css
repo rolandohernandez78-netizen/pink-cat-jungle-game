@@ -86,6 +86,7 @@ html, body {
 }
 
 .hud-top-bar {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -237,22 +238,34 @@ html, body {
 /* Banner de Combo */
 .combo-banner {
     position: absolute;
-    top: 22%;
+    /* top:100% del .hud-top-bar (su propio padre) en vez de un valor fijo,
+       así se acomoda solo justo debajo de esa barra sin importar si el HUD
+       terminó en 1 o 2 filas (celular vs PC). pointer-events:none se
+       hereda de #hud. */
+    top: 100%;
+    margin-top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.82), rgba(239, 68, 68, 0.82));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     color: #ffffff;
     font-family: var(--font-heading);
-    font-size: 1.8rem;
-    padding: 6px 24px;
+    font-size: 1.5rem;
+    padding: 6px 22px;
     border-radius: 30px;
-    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.5);
-    animation: pop-combo 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+    animation: toast-rise 1.2s ease forwards;
 }
 
-@keyframes pop-combo {
-    0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
-    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+/* Aparece con un pequeño rebote, se mantiene un momento, y luego sube
+   y se desvanece sola en vez de desaparecer de golpe. */
+@keyframes toast-rise {
+    0% { transform: translateX(-50%) translateY(8px) scale(0.85); opacity: 0; }
+    14% { transform: translateX(-50%) translateY(0) scale(1.04); opacity: 1; }
+    20% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+    78% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateX(-50%) translateY(-22px) scale(0.96); opacity: 0; }
 }
 
 /* --------------------------------------------------------------------------
@@ -786,17 +799,20 @@ kbd {
 /* Banner de Hitos */
 .milestone-banner {
     position: absolute;
-    top: 32%;
+    top: 100%;
+    margin-top: 68px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(90deg, #a855f7, #6366f1);
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.82), rgba(99, 102, 241, 0.82));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     color: #ffffff;
     font-family: var(--font-heading);
-    font-size: 1.5rem;
-    padding: 8px 26px;
+    font-size: 1.3rem;
+    padding: 8px 24px;
     border-radius: 30px;
-    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
-    animation: pop-combo 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    animation: toast-rise 1.8s ease forwards;
     text-align: center;
 }
 
@@ -857,6 +873,18 @@ kbd {
 @media (max-width: 600px) {
     .glass-panel {
         padding: 24px 20px;
+    }
+
+    .combo-banner {
+        font-size: 1.1rem;
+        padding: 5px 16px;
+        margin-top: 6px;
+    }
+
+    .milestone-banner {
+        font-size: 0.95rem;
+        padding: 6px 18px;
+        margin-top: 52px;
     }
     
     .game-title {
