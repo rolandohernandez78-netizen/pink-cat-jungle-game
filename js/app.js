@@ -260,18 +260,18 @@ class PinkCat {
         this.inMud = false;
     }
 
-    update(keys, touchVector, canvasWidth, canvasHeight) {
-        if (this.pounceCooldown > 0) this.pounceCooldown--;
+    update(keys, touchVector, canvasWidth, canvasHeight, step = 1) {
+        if (this.pounceCooldown > 0) this.pounceCooldown = Math.max(0, this.pounceCooldown - step);
 
         if (this.catnipActive) {
-            this.catnipTimer--;
+            this.catnipTimer -= step;
             if (this.catnipTimer <= 0) {
                 this.catnipActive = false;
             }
         }
 
         if (this.magnetActive) {
-            this.magnetTimer--;
+            this.magnetTimer -= step;
             if (this.magnetTimer <= 0) {
                 this.magnetActive = false;
             }
@@ -284,9 +284,9 @@ class PinkCat {
         this.speed = currentSpeed;
 
         if (this.isPouncing) {
-            this.pounceProgress++;
-            this.x += this.pounceVx * 1.8;
-            this.y += this.pounceVy * 1.8;
+            this.pounceProgress += step;
+            this.x += this.pounceVx * 1.8 * step;
+            this.y += this.pounceVy * 1.8 * step;
 
             if (this.pounceProgress >= this.pounceDuration) {
                 this.isPouncing = false;
@@ -320,8 +320,8 @@ class PinkCat {
                 this.isMoving = false;
             }
 
-            this.x += this.vx;
-            this.y += this.vy;
+            this.x += this.vx * step;
+            this.y += this.vy * step;
         }
 
         const margin = this.radius;
@@ -330,14 +330,14 @@ class PinkCat {
 
         if (this.isMoving || this.isPouncing) {
             const walkSpeed = this.catnipActive ? 0.35 : 0.22;
-            this.walkCycle = (this.walkCycle + walkSpeed) % (Math.PI * 2);
+            this.walkCycle = (this.walkCycle + walkSpeed * step) % (Math.PI * 2);
         } else {
             this.walkCycle = 0;
         }
 
         this.tailAngle = Math.sin(Date.now() * 0.005) * 0.35;
 
-        this.blinkTimer++;
+        this.blinkTimer += step;
         if (this.blinkTimer > 180 + Math.random() * 120) {
             this.isBlinking = true;
             if (this.blinkTimer > 195 + Math.random() * 120) {
@@ -577,8 +577,8 @@ class JungleMouse {
         this.cheeseTimer = this.type === 'CHEESE' ? 180 : 0;
     }
 
-    update(cat, canvasWidth, canvasHeight, bushes = [], cheeses = []) {
-        this.squeakTimer--;
+    update(cat, canvasWidth, canvasHeight, bushes = [], cheeses = [], step = 1) {
+        this.squeakTimer -= step;
         if (this.squeakTimer <= 0) {
             const distToCat = Math.hypot(this.x - cat.x, this.y - cat.y);
             if (distToCat < 350) {
@@ -623,7 +623,7 @@ class JungleMouse {
             }
 
             if (!foundCheese) {
-                this.changeDirectionTimer--;
+                this.changeDirectionTimer -= step;
                 if (this.changeDirectionTimer <= 0) {
                     this.angle += (Math.random() - 0.5) * 1.5;
                     this.vx = Math.cos(this.angle) * this.speed;
@@ -633,8 +633,8 @@ class JungleMouse {
             }
         }
 
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * step;
+        this.y += this.vy * step;
 
         if (this.vx > 0.1) this.facingRight = true;
         if (this.vx < -0.1) this.facingRight = false;
@@ -645,7 +645,7 @@ class JungleMouse {
         if (this.y < margin + 50) { this.y = margin + 50; this.vy *= -1; this.angle = -this.angle; }
         if (this.y > canvasHeight - margin - 20) { this.y = canvasHeight - margin - 20; this.vy *= -1; this.angle = -this.angle; }
 
-        this.scuttleCycle = (this.scuttleCycle + 0.35) % (Math.PI * 2);
+        this.scuttleCycle = (this.scuttleCycle + 0.35 * step) % (Math.PI * 2);
         this.tailWiggle = Math.sin(Date.now() * 0.015) * 0.4;
 
         if (this.type === 'SHADOW') {
@@ -750,8 +750,8 @@ class CheeseDrop {
         this.lifetime = 420;
     }
 
-    update() {
-        this.lifetime--;
+    update(step = 1) {
+        this.lifetime -= step;
     }
 
     draw(ctx) {
@@ -908,10 +908,10 @@ class JungleEnvironment {
         });
     }
 
-    update() {
+    update(step = 1) {
         for (const spore of this.spores) {
-            spore.y += spore.speedY;
-            spore.x += spore.speedX;
+            spore.y += spore.speedY * step;
+            spore.x += spore.speedX * step;
             spore.alpha += (Math.random() - 0.5) * 0.05;
             if (spore.alpha < 0.2) spore.alpha = 0.2;
             if (spore.alpha > 0.9) spore.alpha = 0.9;
@@ -923,9 +923,9 @@ class JungleEnvironment {
         }
 
         for (const b of this.butterflies) {
-            b.x += b.vx;
-            b.y += b.vy;
-            b.wingCycle += 0.2;
+            b.x += b.vx * step;
+            b.y += b.vy * step;
+            b.wingCycle += 0.2 * step;
 
             if (Math.random() < 0.03) {
                 b.vx = (Math.random() - 0.5) * 1.8;
@@ -938,8 +938,8 @@ class JungleEnvironment {
 
         for (let i = this.catnipItems.length - 1; i >= 0; i--) {
             const item = this.catnipItems[i];
-            item.rotation += 0.03;
-            item.duration--;
+            item.rotation += 0.03 * step;
+            item.duration -= step;
             if (item.duration <= 0) {
                 this.catnipItems.splice(i, 1);
             }
@@ -947,9 +947,9 @@ class JungleEnvironment {
 
         for (let i = this.catchParticles.length - 1; i >= 0; i--) {
             const p = this.catchParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.alpha -= 0.035;
+            p.x += p.vx * step;
+            p.y += p.vy * step;
+            p.alpha -= 0.035 * step;
             if (p.alpha <= 0) {
                 this.catchParticles.splice(i, 1);
             }
@@ -957,9 +957,9 @@ class JungleEnvironment {
 
         for (let i = this.scorePopups.length - 1; i >= 0; i--) {
             const popup = this.scorePopups[i];
-            popup.y += popup.vy;
-            popup.alpha -= 0.02;
-            popup.scale = Math.max(1, popup.scale - 0.015);
+            popup.y += popup.vy * step;
+            popup.alpha -= 0.02 * step;
+            popup.scale = Math.max(1, popup.scale - 0.015 * step);
             if (popup.alpha <= 0) {
                 this.scorePopups.splice(i, 1);
             }
@@ -1417,7 +1417,15 @@ class GameEngine {
             this.height = window.innerHeight || document.documentElement.clientHeight || 600;
             this.canvas.width = this.width;
             this.canvas.height = this.height;
-            this.jungle.resize(this.width, this.height);
+
+            // Solo se regenera el terreno (árboles, arbustos, charcos) fuera de una partida
+            // activa, para que nunca aparezca un obstáculo de golpe debajo del gato.
+            if (this.state === GAME_STATES.PLAYING) {
+                this.jungle.width = this.width;
+                this.jungle.height = this.height;
+            } else {
+                this.jungle.resize(this.width, this.height);
+            }
         });
 
         window.addEventListener('keydown', (e) => {
@@ -1600,7 +1608,9 @@ class GameEngine {
     }
 
     loop(timestamp) {
-        const dt = (timestamp - this.lastTime) / 1000;
+        // Se limita el dt a un máximo de 50ms (equivalente a 20 FPS) para evitar
+        // saltos bruscos de tiempo si el usuario cambia de pestaña y vuelve.
+        const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
         this.lastTime = timestamp;
 
         if (this.state === GAME_STATES.PLAYING) {
@@ -1612,6 +1622,10 @@ class GameEngine {
     }
 
     update(dt) {
+        // "step" normaliza toda la animación/movimiento a una base de 60 FPS,
+        // para que el juego se sienta igual de rápido sin importar el monitor o dispositivo.
+        const step = dt * 60;
+
         if (this.timer > 0) {
             this.timer -= dt;
             if (this.timer <= 0) {
@@ -1642,12 +1656,12 @@ class GameEngine {
         }
         this.cat.inMud = inMud;
 
-        this.cat.update(this.keys, this.touchVector, this.width, this.height);
-        this.jungle.update();
+        this.cat.update(this.keys, this.touchVector, this.width, this.height, step);
+        this.jungle.update(step);
 
         for (let i = this.cheeses.length - 1; i >= 0; i--) {
             const cheese = this.cheeses[i];
-            cheese.update();
+            cheese.update(step);
             if (cheese.lifetime <= 0) {
                 this.cheeses.splice(i, 1);
             }
@@ -1655,7 +1669,7 @@ class GameEngine {
 
         for (let i = this.mice.length - 1; i >= 0; i--) {
             const mouse = this.mice[i];
-            mouse.update(this.cat, this.width, this.height, this.jungle.bushes, this.cheeses);
+            mouse.update(this.cat, this.width, this.height, this.jungle.bushes, this.cheeses, step);
 
             const dist = Math.hypot(this.cat.x - mouse.x, this.cat.y - mouse.y);
             const catchDistance = this.cat.radius + mouse.radius + (this.cat.isPouncing ? 16 : 0);
