@@ -1187,6 +1187,20 @@ class NatashaGirl {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.scale(this.visualScale, this.visualScale);
+
+        // Nombre en rosa arriba de la cabeza. Se dibuja antes de espejar por
+        // dirección para que el texto nunca salga al revés.
+        ctx.save();
+        ctx.font = "bold 16px 'Fredoka One', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.strokeText('NATASHA', 0, -54);
+        ctx.fillStyle = '#ff4794';
+        ctx.fillText('NATASHA', 0, -54);
+        ctx.restore();
+
         if (!this.facingRight) ctx.scale(-1, 1);
 
         ctx.beginPath();
@@ -1237,7 +1251,7 @@ class NatashaGirl {
         ctx.fillStyle = '#fcd9b8';
         ctx.fill();
 
-        ctx.fillStyle = '#5b3a29';
+        ctx.fillStyle = '#f2c94c';
         ctx.beginPath(); ctx.arc(-13, -20, 7, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(13, -20, 7, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(0, -31, 12, Math.PI, Math.PI * 2); ctx.fill();
