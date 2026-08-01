@@ -333,18 +333,19 @@ const sound = new SoundSynthesizer();
 // 2. CLASE DEL GATO ROSADO (PINK CAT ENTITY)
 // --------------------------------------------------------------------------
 class PinkCat {
-    constructor(x, y) {
+    constructor(x, y, scale = 1) {
         this.x = x;
         this.y = y;
-        this.radius = 26;
-        
-        this.baseSpeed = 4.2;
+        this.visualScale = scale;
+        this.radius = 26; // tamaño base para el dibujo; el tamaño real de juego es radius * visualScale
+
+        this.baseSpeed = 4.2 * scale;
         this.speed = this.baseSpeed;
         this.vx = 0;
         this.vy = 0;
         this.facingRight = true;
         this.isMoving = false;
-        
+
         this.walkCycle = 0;
         this.tailAngle = 0;
         this.blinkTimer = 0;
@@ -362,8 +363,8 @@ class PinkCat {
         this.catnipTimer = 0;
         this.magnetActive = false;
         this.magnetTimer = 0;
-        this.magnetRadius = 180;
-        
+        this.magnetRadius = 180 * scale;
+
         this.inMud = false;
         this.accessory = null;
         this.isHappy = false;
@@ -433,7 +434,7 @@ class PinkCat {
             this.y += this.vy * step;
         }
 
-        const margin = this.radius;
+        const margin = this.radius * this.visualScale;
         this.x = Math.max(margin, Math.min(canvasWidth - margin, this.x));
         this.y = Math.max(margin + 50, Math.min(canvasHeight - margin - 20, this.y));
 
@@ -492,6 +493,7 @@ class PinkCat {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.scale(this.visualScale, this.visualScale);
 
         if (!this.facingRight) {
             ctx.scale(-1, 1);
@@ -703,12 +705,13 @@ const MOUSE_TYPES = {
 };
 
 class JungleMouse {
-    constructor(x, y, config = MOUSE_TYPES.STANDARD) {
+    constructor(x, y, config = MOUSE_TYPES.STANDARD, scale = 1) {
         this.x = x;
         this.y = y;
         this.config = config;
-        this.radius = config.radius;
-        this.speed = config.speed;
+        this.visualScale = scale;
+        this.radius = config.radius; // tamaño base para el dibujo; el tamaño real es radius * visualScale
+        this.speed = config.speed * scale;
         this.points = config.points;
         this.type = config.type;
 
@@ -788,7 +791,7 @@ class JungleMouse {
         if (this.vx > 0.1) this.facingRight = true;
         if (this.vx < -0.1) this.facingRight = false;
 
-        const margin = this.radius + 10;
+        const margin = (this.radius + 10) * this.visualScale;
         if (this.x < margin) { this.x = margin; this.vx *= -1; this.angle = Math.PI - this.angle; }
         if (this.x > canvasWidth - margin) { this.x = canvasWidth - margin; this.vx *= -1; this.angle = Math.PI - this.angle; }
         if (this.y < margin + 50) { this.y = margin + 50; this.vy *= -1; this.angle = -this.angle; }
@@ -812,6 +815,7 @@ class JungleMouse {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.scale(this.visualScale, this.visualScale);
         ctx.globalAlpha = this.stealthOpacity;
 
         if (!this.facingRight) {
@@ -892,9 +896,10 @@ class JungleMouse {
 }
 
 class CheeseDrop {
-    constructor(x, y) {
+    constructor(x, y, scale = 1) {
         this.x = x;
         this.y = y;
+        this.visualScale = scale;
         this.radius = 12;
         this.lifetime = 420;
     }
@@ -906,6 +911,7 @@ class CheeseDrop {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.scale(this.visualScale, this.visualScale);
 
         ctx.beginPath();
         ctx.arc(0, 0, 16, 0, Math.PI * 2);
@@ -935,12 +941,13 @@ class CheeseDrop {
 // QUESO LANZADO (PROYECTIL PARA DISTRAER AL JEFE FINAL)
 // --------------------------------------------------------------------------
 class ThrownCheese {
-    constructor(x, y, vx, vy) {
+    constructor(x, y, vx, vy, scale = 1) {
         this.x = x;
         this.y = y;
         this.vx = vx;
         this.vy = vy;
-        this.radius = 10;
+        this.visualScale = scale;
+        this.radius = 10 * scale;
         this.life = 90;
         this.rotation = 0;
     }
@@ -956,6 +963,7 @@ class ThrownCheese {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
+        ctx.scale(this.visualScale, this.visualScale);
 
         ctx.beginPath();
         ctx.moveTo(-8, 6);
@@ -976,11 +984,13 @@ class ThrownCheese {
 // JEFE FINAL: SÚPER RATÓN REY DE LA SELVA
 // --------------------------------------------------------------------------
 class SuperMouseBoss {
-    constructor(x, y, maxHealth = 4, radius = 42) {
+    constructor(x, y, maxHealth = 4, radius = 42, scale = 1) {
         this.x = x;
         this.y = y;
-        this.radius = radius;
-        this.baseSpeed = 3.2;
+        // Todas las formas del dibujo de este jefe son proporcionales a this.radius,
+        // así que basta con escalar el radio real (sin necesidad de ctx.scale al dibujar).
+        this.radius = radius * scale;
+        this.baseSpeed = 3.2 * scale;
         this.speed = this.baseSpeed;
         this.vx = 0;
         this.vy = 0;
@@ -1160,10 +1170,11 @@ class SuperMouseBoss {
 // NATASHA: ESCENA ESPECIAL DE VICTORIA
 // --------------------------------------------------------------------------
 class NatashaGirl {
-    constructor(x, y, facingRight) {
+    constructor(x, y, facingRight, scale = 1) {
         this.x = x;
         this.y = y;
         this.facingRight = facingRight;
+        this.visualScale = scale;
         this.walkCycle = 0;
         this.armRaise = 0;
     }
@@ -1175,6 +1186,7 @@ class NatashaGirl {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.scale(this.visualScale, this.visualScale);
         if (!this.facingRight) ctx.scale(-1, 1);
 
         ctx.beginPath();
@@ -1267,9 +1279,10 @@ const LEVEL_THEMES = [
 // 4. RENDERIZADO DE LA SELVA (JUNGLE ENVIRONMENT)
 // --------------------------------------------------------------------------
 class JungleEnvironment {
-    constructor(canvasWidth, canvasHeight) {
+    constructor(canvasWidth, canvasHeight, scale = 1) {
         this.width = canvasWidth;
         this.height = canvasHeight;
+        this.scale = scale;
         this.theme = LEVEL_THEMES[0];
 
         this.trees = [];
@@ -1291,6 +1304,10 @@ class JungleEnvironment {
         this.generateTerrain();
     }
 
+    setScale(scale) {
+        this.scale = scale;
+    }
+
     setTheme(theme) {
         this.theme = theme;
         this.generateTerrain();
@@ -1303,13 +1320,14 @@ class JungleEnvironment {
         this.spores = [];
         this.butterflies = [];
 
+        const s = this.scale;
         const treeCount = Math.floor(this.width / 180) + 2;
         for (let i = 0; i < treeCount; i++) {
             this.trees.push({
                 x: i * 200 + (Math.random() * 80 - 40),
                 y: Math.random() * 80,
-                trunkWidth: 40 + Math.random() * 30,
-                crownRadius: 90 + Math.random() * 50
+                trunkWidth: (40 + Math.random() * 30) * s,
+                crownRadius: (90 + Math.random() * 50) * s
             });
         }
 
@@ -1318,7 +1336,7 @@ class JungleEnvironment {
             this.bushes.push({
                 x: 100 + Math.random() * (this.width - 200),
                 y: 120 + Math.random() * (this.height - 240),
-                radius: 38 + Math.random() * 25,
+                radius: (38 + Math.random() * 25) * s,
                 color: Math.random() > 0.5 ? this.theme.bushColors[0] : this.theme.bushColors[1]
             });
         }
@@ -1328,8 +1346,8 @@ class JungleEnvironment {
             this.mudPuddles.push({
                 x: 120 + Math.random() * (this.width - 240),
                 y: 140 + Math.random() * (this.height - 280),
-                rx: 40 + Math.random() * 25,
-                ry: 24 + Math.random() * 15
+                rx: (40 + Math.random() * 25) * s,
+                ry: (24 + Math.random() * 15) * s
             });
         }
 
@@ -1360,7 +1378,7 @@ class JungleEnvironment {
         this.catnipItems.push({
             x: x,
             y: y,
-            radius: 16,
+            radius: 16, // tamaño base; el tamaño real es radius * this.scale
             rotation: 0,
             duration: 600
         });
@@ -1527,6 +1545,7 @@ class JungleEnvironment {
             ctx.save();
             ctx.translate(item.x, item.y);
             ctx.rotate(item.rotation);
+            ctx.scale(this.scale, this.scale);
 
             ctx.beginPath();
             ctx.arc(0, 0, item.radius + 8, 0, Math.PI * 2);
@@ -2155,6 +2174,7 @@ class GameEngine {
         this.height = window.innerHeight || document.documentElement.clientHeight || 600;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
+        this.worldScale = this.computeWorldScale();
 
         this.state = GAME_STATES.START;
         this.mode = 'adventure';
@@ -2181,10 +2201,10 @@ class GameEngine {
         this.victoryPhaseTimer = 0;
         this.natashaTargetX = 0;
 
-        this.cat = new PinkCat(this.width / 2, this.height / 2);
+        this.cat = new PinkCat(this.width / 2, this.height / 2, this.worldScale);
         this.mice = [];
         this.cheeses = [];
-        this.jungle = new JungleEnvironment(this.width, this.height);
+        this.jungle = new JungleEnvironment(this.width, this.height, this.worldScale);
 
         this.keys = {};
         this.touchVector = { active: false, x: 0, y: 0 };
@@ -2207,12 +2227,24 @@ class GameEngine {
         requestAnimationFrame((t) => this.loop(t));
     }
 
+    // El mundo del juego (gato, ratones, árboles) usa tamaños fijos en píxeles,
+    // así que sin este factor se ve diminuto en monitores grandes de PC y hay
+    // que achicar la ventana para jugar cómodo. Se recalcula en cada resize,
+    // pero solo afecta a las entidades que se crean de ahí en adelante (no
+    // reescala de golpe al gato o los ratones que ya están en pantalla).
+    computeWorldScale() {
+        const raw = this.height / 720;
+        return Math.max(0.85, Math.min(raw, 2.0));
+    }
+
     bindEvents() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth || document.documentElement.clientWidth || 800;
             this.height = window.innerHeight || document.documentElement.clientHeight || 600;
             this.canvas.width = this.width;
             this.canvas.height = this.height;
+            this.worldScale = this.computeWorldScale();
+            this.jungle.setScale(this.worldScale);
 
             // Solo se regenera el terreno (árboles, arbustos, charcos) fuera de una partida
             // activa, para que nunca aparezca un obstáculo de golpe debajo del gato.
@@ -2351,7 +2383,7 @@ class GameEngine {
             : LEVEL_THEMES[0];
         this.jungle.setTheme(theme);
 
-        this.cat = new PinkCat(this.width / 2, this.height / 2);
+        this.cat = new PinkCat(this.width / 2, this.height / 2, this.worldScale);
         this.cat.accessory = this.ui.equippedAccessory;
         if (this.ui.ownsPowerup('quick_pounce')) {
             this.cat.maxPounceCooldown = Math.round(this.cat.maxPounceCooldown * 0.75);
@@ -2368,7 +2400,7 @@ class GameEngine {
             this.miceTarget = -1;
             this.timer = 90;
             this.cheeseStock = 8 + (this.ui.ownsPowerup('cheese_stock') ? 4 : 0);
-            this.boss = new SuperMouseBoss(this.width / 2, this.height / 2 - 80, 4, 42);
+            this.boss = new SuperMouseBoss(this.width / 2, this.height / 2 - 80, 4, 42, this.worldScale);
             this.boss.isFinal = true;
             this.ui.setBossMode(true, this.cheeseStock, true);
         } else {
@@ -2393,7 +2425,7 @@ class GameEngine {
             const isMiniBossLevel = this.mode === 'adventure' && MINI_BOSS_LEVELS.includes(this.currentLevel);
             if (isMiniBossLevel) {
                 this.cheeseStock = 4 + (this.ui.ownsPowerup('cheese_stock') ? 2 : 0);
-                this.boss = new SuperMouseBoss(this.width * 0.7, this.height * 0.3, 2, 30);
+                this.boss = new SuperMouseBoss(this.width * 0.7, this.height * 0.3, 2, 30, this.worldScale);
                 this.boss.isFinal = false;
                 this.ui.setBossMode(true, this.cheeseStock, false);
             } else {
@@ -2422,7 +2454,7 @@ class GameEngine {
             mouseConfig = MOUSE_TYPES.CHEESE;
         }
 
-        this.mice.push(new JungleMouse(x, y, mouseConfig));
+        this.mice.push(new JungleMouse(x, y, mouseConfig, this.worldScale));
     }
 
     togglePause() {
@@ -2528,7 +2560,7 @@ class GameEngine {
             mouse.update(this.cat, this.width, this.height, this.jungle.bushes, this.cheeses, step);
 
             const dist = Math.hypot(this.cat.x - mouse.x, this.cat.y - mouse.y);
-            const catchDistance = this.cat.radius + mouse.radius + (this.cat.isPouncing ? 16 : 0);
+            const catchDistance = this.cat.radius * this.cat.visualScale + mouse.radius * mouse.visualScale + (this.cat.isPouncing ? 16 * this.cat.visualScale : 0);
 
             if (dist < catchDistance) {
                 this.catchMouse(mouse, i);
@@ -2537,7 +2569,7 @@ class GameEngine {
 
         for (let i = this.jungle.catnipItems.length - 1; i >= 0; i--) {
             const item = this.jungle.catnipItems[i];
-            if (Math.hypot(this.cat.x - item.x, this.cat.y - item.y) < this.cat.radius + item.radius) {
+            if (Math.hypot(this.cat.x - item.x, this.cat.y - item.y) < this.cat.radius * this.cat.visualScale + item.radius * this.jungle.scale) {
                 this.cat.activateCatnip();
                 this.jungle.catnipItems.splice(i, 1);
                 this.jungle.addScorePopup(item.x, item.y, '¡SUPER VELOCIDAD!', '#22c55e');
@@ -2581,7 +2613,7 @@ class GameEngine {
         this.boss.update(this.cat, this.width, this.height, step, dt);
 
         const distToBoss = Math.hypot(this.cat.x - this.boss.x, this.cat.y - this.boss.y);
-        const catchDistance = this.cat.radius + this.boss.radius + (this.cat.isPouncing ? 16 : 0);
+        const catchDistance = this.cat.radius * this.cat.visualScale + this.boss.radius + (this.cat.isPouncing ? 16 * this.cat.visualScale : 0);
 
         if (this.boss.state === 'DISTRACTED' && distToBoss < catchDistance) {
             this.hitBoss();
@@ -2657,8 +2689,8 @@ class GameEngine {
 
         const enterFromRight = this.cat.x < this.width / 2;
         const startX = enterFromRight ? this.width + 60 : -60;
-        this.natasha = new NatashaGirl(startX, this.cat.y, !enterFromRight);
-        this.natashaTargetX = this.cat.x + (enterFromRight ? 36 : -36);
+        this.natasha = new NatashaGirl(startX, this.cat.y, !enterFromRight, this.worldScale);
+        this.natashaTargetX = this.cat.x + (enterFromRight ? 36 : -36) * this.worldScale;
         this.cat.facingRight = enterFromRight;
 
         this.victoryHearts = [];
@@ -2673,7 +2705,7 @@ class GameEngine {
 
         if (this.victoryPhase === 'walking') {
             const dir = this.natashaTargetX > this.natasha.x ? 1 : -1;
-            this.natasha.x += dir * 3.4 * step;
+            this.natasha.x += dir * 3.4 * this.worldScale * step;
             this.natasha.update(step);
 
             if (Math.abs(this.natasha.x - this.natashaTargetX) < 6) {
@@ -2747,9 +2779,9 @@ class GameEngine {
         const dx = this.boss.x - this.cat.x;
         const dy = this.boss.y - this.cat.y;
         const dist = Math.hypot(dx, dy) || 1;
-        const speed = 9;
+        const speed = 9 * this.worldScale;
 
-        this.thrownCheeses.push(new ThrownCheese(this.cat.x, this.cat.y, (dx / dist) * speed, (dy / dist) * speed));
+        this.thrownCheeses.push(new ThrownCheese(this.cat.x, this.cat.y, (dx / dist) * speed, (dy / dist) * speed, this.worldScale));
         sound.playPounce();
     }
 
@@ -2778,7 +2810,7 @@ class GameEngine {
         if (mouse.type === 'GOLDEN') {
             this.cat.activateCatnip(240);
         } else if (mouse.type === 'CHEESE') {
-            this.cheeses.push(new CheeseDrop(mouse.x, mouse.y));
+            this.cheeses.push(new CheeseDrop(mouse.x, mouse.y, this.worldScale));
         }
 
         this.checkMilestones();
