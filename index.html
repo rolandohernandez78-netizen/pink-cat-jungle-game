@@ -5,12 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>El Gato Rosado en la Selva 🐱🌴 - Pink Cat Jungle Hunt</title>
     <meta name="description" content="Un vibrante videojuego de acción en la selva donde controlas a un gato rosado persiguiendo ratones escurridizos.">
-    
+
+    <!-- PWA: instalable en celular/tablet con ícono propio -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff4794">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gato Rosado">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -58,7 +67,7 @@
 
             <!-- Barra de Vida del Jefe Final -->
             <div id="boss-health-bar" class="boss-health-container hidden">
-                <div class="bar-label boss-label">👑 SÚPER RATÓN 👑</div>
+                <div class="bar-label boss-label" id="boss-label-text">👑 SÚPER RATÓN 👑</div>
                 <div class="bar-track boss-track">
                     <div id="boss-health-fill" class="bar-fill boss-fill" style="width: 100%;"></div>
                 </div>
@@ -234,6 +243,7 @@
                         <span>🧶 Bolas de pelo ganadas:</span>
                         <strong id="victory-stat-hairballs">+0</strong>
                     </div>
+                    <div id="victory-trophy-tag" class="new-record-tag hidden">🏆 ¡Corona de Campeón desbloqueada!</div>
                 </div>
 
                 <div class="menu-buttons">

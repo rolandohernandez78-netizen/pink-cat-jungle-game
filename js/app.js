@@ -3,6 +3,26 @@
    ========================================================================== */
 
 // --------------------------------------------------------------------------
+// 0. VIBRACIÓN TÁCTIL (VIBRATION API - degrada sin errores si no hay soporte)
+// --------------------------------------------------------------------------
+const VIBRATION_PATTERNS = {
+    catch: 12,
+    hit: [25, 15, 25],
+    defeat: [30, 40, 30, 40, 60],
+    victory: [40, 60, 40, 60, 40, 60, 120]
+};
+
+function vibrate(pattern) {
+    try {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    } catch (e) {
+        // Silenciosamente ignorado en navegadores sin soporte (ej. iOS Safari)
+    }
+}
+
+// --------------------------------------------------------------------------
 // 1. MÓDULO DE AUDIO SINTÉTICO (WEB AUDIO API)
 // --------------------------------------------------------------------------
 class SoundSynthesizer {
@@ -650,9 +670,16 @@ class PinkCat {
             bow: { x: 26, y: -22, size: 16 },
             flower: { x: 2, y: -20, size: 16 },
             scarf: { x: 2, y: 10, size: 22 },
-            glasses: { x: 19, y: -12, size: 18 }
+            glasses: { x: 19, y: -12, size: 18 },
+            cap: { x: 10, y: -28, size: 18 },
+            necklace: { x: 4, y: 7, size: 14 },
+            headphones: { x: 12, y: -15, size: 26 },
+            champion_crown: { x: 12, y: -32, size: 22 }
         };
-        const icons = { crown: '👑', bow: '🎀', flower: '🌸', scarf: '🧣', glasses: '🕶️' };
+        const icons = {
+            crown: '👑', bow: '🎀', flower: '🌸', scarf: '🧣', glasses: '🕶️',
+            cap: '🧢', necklace: '💎', headphones: '🎧', champion_crown: '🏆'
+        };
 
         const pos = positions[this.accessory];
         const icon = icons[this.accessory];
@@ -949,10 +976,10 @@ class ThrownCheese {
 // JEFE FINAL: SÚPER RATÓN REY DE LA SELVA
 // --------------------------------------------------------------------------
 class SuperMouseBoss {
-    constructor(x, y, maxHealth = 4) {
+    constructor(x, y, maxHealth = 4, radius = 42) {
         this.x = x;
         this.y = y;
-        this.radius = 42;
+        this.radius = radius;
         this.baseSpeed = 3.2;
         this.speed = this.baseSpeed;
         this.vx = 0;
@@ -965,6 +992,7 @@ class SuperMouseBoss {
         this.state = 'ROAMING'; // ROAMING | DISTRACTED | DEFEATED
         this.distractedTimer = 0;
         this.maxDistractedTime = 3;
+        this.isFinal = true;
 
         this.scuttleCycle = 0;
         this.changeDirectionTimer = 60;
@@ -1576,9 +1604,13 @@ class JungleEnvironment {
 const SHOP_ACCESSORIES = [
     { id: 'flower', name: 'Flor Tropical', icon: '🌸', price: 15, desc: 'Una flor selvática en la oreja' },
     { id: 'bow', name: 'Moño Rosa', icon: '🎀', price: 20, desc: 'Un lindo moño para lucir' },
+    { id: 'cap', name: 'Gorra Aventurera', icon: '🧢', price: 22, desc: 'Lista para explorar la selva' },
     { id: 'scarf', name: 'Bufanda', icon: '🧣', price: 25, desc: 'Bien abrigado en la selva' },
+    { id: 'necklace', name: 'Collar de Gema', icon: '💎', price: 28, desc: 'Un brillo precioso en el cuello' },
     { id: 'glasses', name: 'Lentes Cool', icon: '🕶️', price: 30, desc: 'Para la caza con estilo' },
-    { id: 'crown', name: 'Corona Real', icon: '👑', price: 50, desc: 'Eres la realeza de la selva' }
+    { id: 'headphones', name: 'Audífonos DJ', icon: '🎧', price: 35, desc: 'Música mientras caza ratones' },
+    { id: 'crown', name: 'Corona Real', icon: '👑', price: 50, desc: 'Eres la realeza de la selva' },
+    { id: 'champion_crown', name: 'Corona de Campeón', icon: '🏆', price: 0, desc: 'Trofeo por vencer al Súper Ratón', locked: true }
 ];
 
 const SHOP_POWERUPS = [
@@ -1674,6 +1706,13 @@ class UIManager {
         this.ownedAccessories.push(id);
         localStorage.setItem('pink_cat_owned_accessories', JSON.stringify(this.ownedAccessories));
         this.equipAccessory(id);
+        return true;
+    }
+
+    unlockTrophyAccessory(id) {
+        if (this.ownsAccessory(id)) return false;
+        this.ownedAccessories.push(id);
+        localStorage.setItem('pink_cat_owned_accessories', JSON.stringify(this.ownedAccessories));
         return true;
     }
 
@@ -1838,14 +1877,20 @@ class UIManager {
             const owned = kind === 'accessories' ? this.ownsAccessory(item.id) : this.ownsPowerup(item.id);
             const equipped = kind === 'accessories' && this.equippedAccessory === item.id;
             const canAfford = this.hairballs >= item.price;
+            const isLocked = !!item.locked && !owned;
 
             const card = document.createElement('div');
             card.className = 'shop-item';
 
-            const btnLabel = owned
-                ? (kind === 'accessories' ? (equipped ? '✅ Equipado' : 'Usar') : '✅ Comprado')
-                : `🧶 ${item.price}`;
-            const btnDisabled = !owned && !canAfford;
+            let btnLabel;
+            if (isLocked) {
+                btnLabel = '🔒 Vence al Jefe';
+            } else if (owned) {
+                btnLabel = kind === 'accessories' ? (equipped ? '✅ Equipado' : 'Usar') : '✅ Comprado';
+            } else {
+                btnLabel = `🧶 ${item.price}`;
+            }
+            const btnDisabled = isLocked || (!owned && !canAfford);
 
             card.innerHTML = `
                 <div class="shop-item-icon">${item.icon}</div>
@@ -1856,6 +1901,7 @@ class UIManager {
 
             const btn = card.querySelector('.shop-item-btn');
             btn.addEventListener('click', () => {
+                if (isLocked) return;
                 if (kind === 'accessories') {
                     if (this.ownsAccessory(item.id)) {
                         this.equipAccessory(item.id);
@@ -1907,8 +1953,10 @@ class UIManager {
     showVictory(stats) {
         const scoreEl = document.getElementById('victory-stat-score');
         const hairballsEl = document.getElementById('victory-stat-hairballs');
+        const trophyEl = document.getElementById('victory-trophy-tag');
         if (scoreEl) scoreEl.textContent = stats.totalScore.toLocaleString();
         if (hairballsEl) hairballsEl.textContent = `+${stats.hairballsEarned}`;
+        if (trophyEl) trophyEl.classList.toggle('hidden', !stats.newTrophy);
 
         this.addHairballs(stats.hairballsEarned);
         this.checkHighScore(stats.totalScore);
@@ -1934,9 +1982,14 @@ class UIManager {
         }
     }
 
-    setBossMode(active, cheeseCount = 0) {
+    setBossMode(active, cheeseCount = 0, isFinal = true) {
         const cheeseBtn = document.getElementById('btn-touch-cheese');
         if (cheeseBtn) cheeseBtn.classList.toggle('hidden', !active);
+
+        const labelEl = document.getElementById('boss-label-text');
+        if (labelEl) {
+            labelEl.textContent = isFinal ? '👑 SÚPER RATÓN 👑' : '🐭 RATÓN TRAVIESO 🐭';
+        }
 
         if (active) {
             this.updateCheeseStock(cheeseCount);
@@ -2086,6 +2139,7 @@ const GAME_STATES = {
 };
 
 const MAX_ADVENTURE_LEVEL = 5;
+const MINI_BOSS_LEVELS = [2, 4];
 
 class GameEngine {
     constructor() {
@@ -2314,8 +2368,9 @@ class GameEngine {
             this.miceTarget = -1;
             this.timer = 90;
             this.cheeseStock = 8 + (this.ui.ownsPowerup('cheese_stock') ? 4 : 0);
-            this.boss = new SuperMouseBoss(this.width / 2, this.height / 2 - 80);
-            this.ui.setBossMode(true, this.cheeseStock);
+            this.boss = new SuperMouseBoss(this.width / 2, this.height / 2 - 80, 4, 42);
+            this.boss.isFinal = true;
+            this.ui.setBossMode(true, this.cheeseStock, true);
         } else {
             if (this.mode === 'adventure') {
                 this.miceTarget = 10 + this.currentLevel * 5;
@@ -2335,7 +2390,15 @@ class GameEngine {
                 150 + Math.random() * (this.height - 300)
             );
 
-            this.ui.setBossMode(false);
+            const isMiniBossLevel = this.mode === 'adventure' && MINI_BOSS_LEVELS.includes(this.currentLevel);
+            if (isMiniBossLevel) {
+                this.cheeseStock = 4 + (this.ui.ownsPowerup('cheese_stock') ? 2 : 0);
+                this.boss = new SuperMouseBoss(this.width * 0.7, this.height * 0.3, 2, 30);
+                this.boss.isFinal = false;
+                this.ui.setBossMode(true, this.cheeseStock, false);
+            } else {
+                this.ui.setBossMode(false);
+            }
         }
 
         if (this.ui.ownsPowerup('extra_time')) {
@@ -2481,7 +2544,9 @@ class GameEngine {
             }
         }
 
-        if (!this.boss && this.mice.length < 10) {
+        const finalBossActive = this.boss && this.boss.isFinal;
+
+        if (!finalBossActive && this.mice.length < 10) {
             this.spawnMouse();
         }
 
@@ -2489,7 +2554,7 @@ class GameEngine {
             this.updateBossFight(step, dt);
         }
 
-        if (!this.boss && this.mode === 'adventure' && this.miceCaught >= this.miceTarget) {
+        if (!finalBossActive && this.mode === 'adventure' && this.miceCaught >= this.miceTarget) {
             this.triggerLevelClear();
         }
 
@@ -2547,12 +2612,35 @@ class GameEngine {
         this.boss.takeHit();
         this.jungle.addCatchParticles(this.boss.x, this.boss.y, '#facc15');
         sound.playCatch();
+        vibrate(VIBRATION_PATTERNS.hit);
 
         if (this.boss.state === 'DEFEATED') {
-            this.startVictoryScene();
+            if (this.boss.isFinal) {
+                this.startVictoryScene();
+            } else {
+                this.defeatMiniBoss();
+            }
         } else {
             this.jungle.addScorePopup(this.boss.x, this.boss.y, '¡GOLPE!', '#ef4444');
         }
+    }
+
+    defeatMiniBoss() {
+        const bonus = 800;
+        this.score += bonus;
+        this.levelScore += bonus;
+        const hairballBonus = 15;
+
+        this.jungle.addCatchParticles(this.boss.x, this.boss.y, '#fbbf24');
+        this.jungle.addScorePopup(this.boss.x, this.boss.y, `¡RATÓN TRAVIESO! +${bonus}`, '#fbbf24');
+        this.ui.addHairballs(hairballBonus);
+        this.ui.showMilestone(`🐭👑 ¡MINI-JEFE DERROTADO! +${hairballBonus} 🧶`);
+        sound.playLevelClear();
+        vibrate(VIBRATION_PATTERNS.defeat);
+
+        this.boss = null;
+        this.thrownCheeses = [];
+        this.ui.setBossMode(false);
     }
 
     startVictoryScene() {
@@ -2560,6 +2648,7 @@ class GameEngine {
         this.boss = null;
         this.thrownCheeses = [];
         sound.stopMusic();
+        vibrate(VIBRATION_PATTERNS.victory);
 
         this.cat.isPouncing = false;
         this.cat.vx = 0;
@@ -2678,6 +2767,7 @@ class GameEngine {
         this.levelScore += earnedPoints;
 
         sound.playCatch();
+        vibrate(VIBRATION_PATTERNS.catch);
         this.jungle.addCatchParticles(mouse.x, mouse.y, mouse.config.color);
         this.jungle.addScorePopup(mouse.x, mouse.y, `+${earnedPoints}`, mouse.type === 'GOLDEN' ? '#fbbf24' : '#ffffff');
 
@@ -2753,10 +2843,12 @@ class GameEngine {
         this.score += 500;
         const hairballsEarned = this.computeHairballs(this.levelScore) + 50;
         this.ui.setBossMode(false);
+        const newTrophy = this.ui.unlockTrophyAccessory('champion_crown');
 
         this.ui.showVictory({
             totalScore: this.score,
-            hairballsEarned: hairballsEarned
+            hairballsEarned: hairballsEarned,
+            newTrophy: newTrophy
         });
     }
 
@@ -2807,4 +2899,16 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 } else {
     window.addEventListener('DOMContentLoaded', bootPinkCatGame);
     window.addEventListener('load', bootPinkCatGame);
+}
+
+// Registro del Service Worker (PWA instalable). Solo funciona si el juego se
+// sirve por http/https (ej. un servidor local o publicado en internet); en
+// file:// (doble clic) el navegador ignora esto sin errores y el juego
+// sigue funcionando normal, simplemente sin opción de "instalar".
+if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {
+            // Silenciosamente ignorado: el juego funciona igual sin PWA.
+        });
+    });
 }
